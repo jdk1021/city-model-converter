@@ -1,4 +1,4 @@
-![3D City Model Converter](docs/hero-en.png)
+![3D City Model Converter](docs/cover-en.png)
 
 # 3D City Model Converter
 
@@ -7,11 +7,17 @@ English | [한국어](README.ko.md)
 A web service that converts 3ds and obj models into CityGML 2.0 or 3.0 building models.
 The interface is available in English and Korean.
 
+## Screen
+
+Five buildings in one obj converted to CityGML 2.0 LoD2. The result shows per-building counts and a 3D preview colored by surface type.
+
+![Conversion result](docs/screenshot-en.png)
+
+## How it converts
+
 | Split into buildings | Classify surfaces | Georeference |
 |---|---|---|
 | ![](static/img/split.png) | ![](static/img/classify.png) | ![](static/img/georef.png) |
-
-![Conversion result](docs/screenshot-en.png)
 
 ## Run
 
@@ -72,4 +78,4 @@ Deploy on Dokploy in either of two ways.
 
 For large uploads, also raise the request body size and timeout limits of the proxy in front.
 
-Illustrations are drawn in `static/art/art.html`; open it with `?scene=hero|split|classify|georef` and capture.
+Illustrations are drawn in HTML and captured in a browser. The cover image comes from `docs/art/cover.html` (`?lang=ko|en`), the in-app illustrations from `static/art/art.html` (`?scene=hero|split|classify|georef`).

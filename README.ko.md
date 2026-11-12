@@ -1,4 +1,4 @@
-![3D 도시모델 변환](docs/hero-ko.png)
+![3D 도시모델 변환](docs/cover-ko.png)
 
 # 3D 도시모델 변환
 
@@ -7,11 +7,17 @@
 3ds·obj 모델을 CityGML 2.0 또는 3.0 건물 모델로 변환하는 웹 서비스.
 화면은 한국어와 영어를 지원한다.
 
+## 화면
+
+건물 5동이 든 obj 하나를 CityGML 2.0 LoD2로 변환한 결과다. 건물별 집계와 경계면 종류별로 색을 입힌 3D 미리보기가 나온다.
+
+![변환 결과 화면](docs/screenshot-ko.png)
+
+## 변환 과정
+
 | 건물 단위 분리 | 경계면 분류 | 좌표계 부여 |
 |---|---|---|
 | ![](static/img/split.png) | ![](static/img/classify.png) | ![](static/img/georef.png) |
-
-![변환 결과 화면](docs/screenshot-ko.png)
 
 ## 실행
 
@@ -73,4 +79,4 @@ Dokploy에서는 두 방식 중 하나로 배포한다.
 
 업로드 용량이 크면 앞단 프록시의 요청 본문 크기 제한과 시간 제한도 함께 늘려야 한다.
 
-그림 원본은 `static/art/art.html`이며 `?scene=hero|split|classify|georef`로 열어 캡처한다.
+그림은 HTML로 그려 브라우저로 캡처한다. README 대표 이미지는 `docs/art/cover.html`(`?lang=ko|en`), 화면 안 그림은 `static/art/art.html`(`?scene=hero|split|classify|georef`)이 원본이다.

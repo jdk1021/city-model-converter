@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>README cover</title>
+<!-- README 맨 위 대표 이미지 원본. ?lang=ko|en 으로 열어 #cover를 투명 배경, 2배 해상도로 캡처해 docs/cover-ko.png, docs/cover-en.png로 저장한다. -->
+<style>
+  html, body { margin: 0; background: transparent; }
+  body { font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif; color: #191f28; letter-spacing: -0.02em; }
+  .cover { position: relative; width: 1360px; height: 680px; border-radius: 40px; background: #f2f4f6; overflow: hidden; }
+
+  .intro { position: absolute; left: 80px; top: 0; bottom: 0; width: 470px; display: flex; flex-direction: column; justify-content: center; }
+  .tag { align-self: flex-start; padding: 8px 16px; border-radius: 999px; background: #e8f3ff; color: #3182f6; font-size: 18px; font-weight: 700; }
+  h1 { margin: 22px 0 0; font-size: 58px; line-height: 1.18; font-weight: 800; letter-spacing: -0.035em; }
+  .lead { margin: 18px 0 0; font-size: 23px; line-height: 1.5; color: #4e5968; font-weight: 500; }
+  .specs { display: flex; gap: 36px; margin-top: 44px; }
+  .specs dt { font-size: 16px; color: #8b95a1; font-weight: 600; }
+  .specs dd { margin: 6px 0 0; font-size: 22px; font-weight: 700; }
+
+  .card { position: absolute; background: #fff; border-radius: 32px; box-shadow: 0 2px 6px rgba(0, 27, 55, .04), 0 16px 40px rgba(0, 27, 55, .07); }
+  .label { color: #8b95a1; font-size: 17px; font-weight: 600; }
+
+  .flow { position: absolute; right: 80px; top: 0; bottom: 0; display: flex; align-items: center; gap: 20px; }
+  .flow .card { position: static; box-sizing: border-box; }
+  .files { width: 240px; padding: 28px 26px 30px; }
+  .file { display: flex; align-items: center; gap: 14px; margin-top: 18px; font-size: 19px; font-weight: 600; }
+  .file b { flex: none; width: 50px; height: 50px; border-radius: 15px; display: grid; place-items: center; color: #fff; font-size: 14px; font-weight: 800; letter-spacing: 0; }
+
+  .go { flex: none; width: 56px; height: 56px; border-radius: 50%; background: #3182f6; display: grid; place-items: center; }
+
+  .gml { width: 330px; padding: 28px 28px 30px; }
+  .gml .head { display: flex; justify-content: space-between; align-items: baseline; }
+  .gml .ver { font-size: 15px; font-weight: 700; color: #3182f6; }
+  .tree { margin: 18px 0 0; padding: 0; list-style: none; font-family: "JetBrains Mono", "D2Coding", "Noto Sans Mono", monospace; font-size: 16px; letter-spacing: 0; }
+  .tree ul { margin: 0 0 0 7px; padding: 0 0 0 19px; list-style: none; border-left: 2px solid #e5e8eb; }
+  .tree .row { display: flex; align-items: center; gap: 10px; height: 42px; }
+  .tree .dot { flex: none; width: 12px; height: 12px; border-radius: 4px; }
+  .tree .root { font-weight: 700; }
+  .tree em { margin-left: auto; font-style: normal; color: #8b95a1; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .crs { display: flex; gap: 8px; margin-top: 18px; }
+  .crs span { padding: 7px 12px; border-radius: 10px; background: #f2f4f6; color: #4e5968; font-size: 15px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="cover" id="cover">
+  <div class="intro">
+    <span class="tag">3ds · obj → CityGML</span>
+    <h1 data-t="title">3D 도시모델 변환</h1>
+    <p class="lead" data-t="lead">3D 모델 파일을 올리면 지붕·벽·바닥을 나눠<br>CityGML 건물 모델로 바꿔 드려요.</p>
+    <dl class="specs">
+      <div><dt>CityGML</dt><dd>2.0 · 3.0</dd></div>
+      <div><dt data-t="lod">상세 수준</dt><dd>LoD2 · LoD3</dd></div>
+      <div><dt data-t="ui">화면</dt><dd data-t="langs">한국어 · English</dd></div>
+    </dl>
+  </div>
+
+  <div class="flow">
+  <div class="card files">
+    <div class="label" data-t="input">올린 파일</div>
+    <div class="file"><b style="background:#3182f6">OBJ</b>block.obj</div>
+    <div class="file"><b style="background:#8b95a1">MTL</b>block.mtl</div>
+    <div class="file"><b style="background:#8b5cf6">3DS</b>tower.3ds</div>
+    <div class="file"><b style="background:#15c47e">PNG</b>wall.png</div>
+  </div>
+
+  <div class="go"><svg viewBox="0 0 48 48" width="28" height="28"><path d="M10 24h26M26 12l12 12-12 12" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+  <div class="card gml">
+    <div class="head"><span class="label">citymodel.gml</span><span class="ver">LoD2</span></div>
+    <ul class="tree">
+      <li><div class="row root">core:CityModel</div>
+        <ul>
+          <li><div class="row">bldg:Building<em>× 8</em></div>
+            <ul>
+              <li><div class="row"><span class="dot" style="background:#e5604a"></span>RoofSurface</div></li>
+              <li><div class="row"><span class="dot" style="background:#e0cf9f"></span>WallSurface</div></li>
+              <li><div class="row"><span class="dot" style="background:#5f7184"></span>GroundSurface</div></li>
+            </ul>
+          </li>
+          <li><div class="row">app:Appearance</div></li>
+        </ul>
+      </li>
+    </ul>
+    <div class="crs"><span>EPSG:5186</span><span>Solid</span></div>
+  </div>
+  </div>
+</div>
+
+<script>
+  const T = {
+    en: {
+      title: '3D City Model<br>Converter',
+      lead: 'Upload a 3D model and get a CityGML<br>building model with roofs, walls and ground.',
+      lod: 'Level of detail', ui: 'Interface', langs: 'English · 한국어', input: 'Uploaded files',
+    },
+  };
+  const lang = new URLSearchParams(location.search).get('lang');
+  if (T[lang]) {
+    document.documentElement.lang = lang;
+    for (const el of document.querySelectorAll('[data-t]')) el.innerHTML = T[lang][el.dataset.t];
+  }
+  document.documentElement.dataset.ready = '1';
+</script>
+</body>
+</html>
