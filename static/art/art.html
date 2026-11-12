@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Illustration source</title>
+<!-- 화면과 README에 쓰는 그림 원본. ?scene=hero|split|classify|georef 로 열어 #art를 투명 배경으로 캡처한다. -->
+<style>
+  html, body { margin: 0; background: transparent; }
+  body { font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif; color: #191f28; letter-spacing: -0.02em; }
+  .art { position: relative; display: none; overflow: hidden; }
+  .art.on { display: block; }
+  .blob { position: absolute; border-radius: 50%; }
+  .panel { position: absolute; background: #fff; border-radius: 36px; box-shadow: 0 24px 60px rgba(0, 0, 0, .14); padding: 36px; }
+  .cap { color: #8b95a1; font-size: 24px; font-weight: 600; }
+  .ttl { font-size: 40px; font-weight: 800; margin-top: 4px; }
+  .row { display: flex; align-items: center; gap: 20px; margin-top: 26px; font-size: 30px; font-weight: 600; }
+  .row small { margin-left: auto; color: #8b95a1; font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .badge { flex: none; width: 76px; height: 76px; border-radius: 22px; display: grid; place-items: center; color: #fff; font-size: 24px; font-weight: 800; }
+  .dot { flex: none; width: 24px; height: 24px; border-radius: 50%; }
+  .pill { display: inline-block; padding: 8px 20px; border-radius: 999px; background: #e8f3ff; color: #3182f6; font-size: 24px; font-weight: 700; }
+  .chip { position: absolute; display: flex; align-items: center; gap: 14px; padding: 16px 26px; border-radius: 22px; background: #fff;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .13); font-size: 30px; font-weight: 700; white-space: nowrap; }
+  .go { position: absolute; width: 104px; height: 104px; border-radius: 50%; background: #3182f6; display: grid; place-items: center;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, .2); }
+  svg { display: block; }
+</style>
+</head>
+<body>
+
+<!-- 히어로: 모델 파일이 CityGML 건물이 되는 과정을 카드 두 장으로 -->
+<div class="art" id="hero" style="width:1280px;height:820px">
+  <div class="blob" style="left:170px;top:20px;width:800px;height:800px;background:#e8f3ff"></div>
+  <div class="blob" style="left:860px;top:30px;width:230px;height:230px;background:#d3e8ff"></div>
+  <div class="panel" style="left:40px;top:170px;width:500px;transform:rotate(-4deg)">
+    <div class="cap">3D model</div>
+    <div class="row"><span class="badge" style="background:#3182f6">OBJ</span>campus.obj<small>48 MB</small></div>
+    <div class="row"><span class="badge" style="background:#8b5cf6">3DS</span>tower.3ds<small>12 MB</small></div>
+    <div class="row"><span class="badge" style="background:#15c47e">PNG</span>wall.png<small>2 MB</small></div>
+  </div>
+  <div class="panel" style="left:630px;top:110px;width:540px;transform:rotate(3deg)">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><div class="cap">bldg:Building</div><div class="ttl">CityGML 3.0</div></div>
+      <span class="pill">LoD2</span>
+    </div>
+    <svg viewBox="0 0 488 250" width="468" height="240" style="margin-top:24px;border-radius:24px;background:#f2f4f6">
+      <rect x="84" y="208" width="320" height="14" rx="7" fill="#5f7184"/>
+      <rect x="124" y="118" width="240" height="84" rx="6" fill="#e9dcb8"/>
+      <rect x="160" y="146" width="44" height="56" rx="4" fill="#fff" opacity=".85"/>
+      <rect x="236" y="140" width="92" height="34" rx="4" fill="#fff" opacity=".85"/>
+      <path d="M104 112 L244 34 L384 112 Z" fill="#e5604a" stroke="#e5604a" stroke-width="12" stroke-linejoin="round"/>
+    </svg>
+    <div class="row"><span class="dot" style="background:#e5604a"></span>RoofSurface<small>2</small></div>
+    <div class="row"><span class="dot" style="background:#e0cf9f"></span>WallSurface<small>4</small></div>
+    <div class="row"><span class="dot" style="background:#5f7184"></span>GroundSurface<small>1</small></div>
+  </div>
+  <div class="go" style="left:536px;top:300px">
+    <svg viewBox="0 0 48 48" width="52" height="52"><path d="M10 24h26M26 12l12 12-12 12" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+</div>
+
+<!-- 건물 단위 분리: 한 덩어리 → 건물별 색 -->
+<div class="art" id="split" style="width:1200px;height:760px">
+  <svg viewBox="0 0 1200 760" width="1200" height="760">
+    <g fill="#c9d0d8">
+      <rect x="90" y="190" width="150" height="130" rx="18"/><rect x="262" y="170" width="120" height="190" rx="18"/>
+      <rect x="110" y="345" width="130" height="200" rx="18"/><rect x="262" y="385" width="170" height="120" rx="18"/>
+      <rect x="250" y="528" width="120" height="76" rx="18"/>
+      <rect x="230" y="250" width="44" height="40" /><rect x="170" y="310" width="40" height="46"/><rect x="300" y="350" width="40" height="46"/><rect x="300" y="495" width="40" height="44"/>
+    </g>
+    <circle cx="600" cy="390" r="52" fill="#3182f6"/>
+    <path d="M580 390h36M604 374l16 16-16 16" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="770" y="180" width="150" height="130" rx="18" fill="#3182f6"/><rect x="950" y="160" width="120" height="190" rx="18" fill="#15c47e"/>
+    <rect x="790" y="345" width="130" height="200" rx="18" fill="#ffb331"/><rect x="950" y="385" width="170" height="120" rx="18" fill="#8b5cf6"/>
+    <rect x="938" y="536" width="120" height="76" rx="18" fill="#f04452"/>
+    <g fill="#fff" font-size="40" font-weight="800" text-anchor="middle" font-family="Pretendard, sans-serif">
+      <text x="845" y="259">1</text><text x="1010" y="269">2</text><text x="855" y="459">3</text><text x="1035" y="459">4</text><text x="998" y="588">5</text>
+    </g>
+  </svg>
+  <div class="chip" style="left:150px;top:74px;color:#6b7684">mesh</div>
+  <div class="chip" style="left:800px;top:54px"><span class="dot" style="background:#3182f6"></span>bldg:Building × 5</div>
+</div>
+
+<!-- 경계면 분류: 정면도에서 지붕·벽·바닥을 떼어 보여 준다 -->
+<div class="art" id="classify" style="width:1200px;height:760px">
+  <svg viewBox="0 0 1200 760" width="1200" height="760">
+    <path d="M150 268 L400 108 L650 268 Z" fill="#e5604a" stroke="#e5604a" stroke-width="20" stroke-linejoin="round"/>
+    <rect x="186" y="318" width="428" height="230" rx="14" fill="#e9dcb8"/>
+    <rect x="246" y="398" width="84" height="150" rx="8" fill="#fff" opacity=".85"/>
+    <rect x="400" y="380" width="150" height="82" rx="8" fill="#fff" opacity=".85"/>
+    <rect x="120" y="598" width="560" height="30" rx="15" fill="#5f7184"/>
+    <g fill="none" stroke="#b0b8c1" stroke-width="4" stroke-dasharray="2 12" stroke-linecap="round">
+      <path d="M560 200 H820"/><path d="M614 430 H820"/><path d="M680 613 H820"/>
+    </g>
+  </svg>
+  <div class="chip" style="left:830px;top:164px"><span class="dot" style="background:#e5604a"></span>RoofSurface</div>
+  <div class="chip" style="left:830px;top:394px"><span class="dot" style="background:#e0cf9f"></span>WallSurface</div>
+  <div class="chip" style="left:830px;top:577px"><span class="dot" style="background:#5f7184"></span>GroundSurface</div>
+</div>
+
+<!-- 좌표계 부여: 좌표 격자 위에 놓인 건물과 위치 핀 -->
+<div class="art" id="georef" style="width:1200px;height:760px">
+  <svg viewBox="0 0 1200 760" width="1200" height="760">
+    <rect x="120" y="110" width="760" height="540" rx="36" fill="#fff"/>
+    <g stroke="#e5e8eb" stroke-width="3">
+      <path d="M272 110V650M424 110V650M576 110V650M728 110V650M120 218H880M120 326H880M120 434H880M120 542H880"/>
+    </g>
+    <path d="M120 470 C300 420 420 560 600 500 S800 380 880 400" fill="none" stroke="#d3e8ff" stroke-width="30" stroke-linecap="round"/>
+    <rect x="300" y="250" width="110" height="96" rx="16" fill="#c9d0d8"/><rect x="450" y="210" width="96" height="150" rx="16" fill="#c9d0d8"/>
+    <rect x="610" y="250" width="130" height="90" rx="16" fill="#3182f6"/>
+    <path d="M675 150c-34 0-60 26-60 58 0 44 60 98 60 98s60-54 60-98c0-32-26-58-60-58z" fill="#191f28"/>
+    <circle cx="675" cy="208" r="22" fill="#fff"/>
+    <g fill="#8b95a1" font-size="24" font-weight="600" font-family="Pretendard, sans-serif" text-anchor="middle">
+      <text x="272" y="700">200 000</text><text x="576" y="700">200 100</text><text x="880" y="700">200 200</text>
+    </g>
+  </svg>
+  <div class="chip" style="left:800px;top:150px"><span class="pill" style="font-size:24px">EPSG:5186</span></div>
+  <div class="chip" style="left:800px;top:270px;font-variant-numeric:tabular-nums">X 200 158.420</div>
+  <div class="chip" style="left:800px;top:370px;font-variant-numeric:tabular-nums">Y 500 073.115</div>
+</div>
+
+<script>
+  const name = new URLSearchParams(location.search).get('scene') || 'hero';
+  (document.getElementById(name) || document.getElementById('hero')).classList.add('on');
+  document.documentElement.dataset.ready = '1';
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# Dokploy Compose 배포용. 도메인은 Dokploy 화면에서 서비스 converter, 포트 8000으로 연결한다.
+services:
+  converter:
+    build: .
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      # 입장 토큰. 비워 두면 토큰 없이 접속된다. Dokploy 환경 변수에 넣는다.
+      CONVERTER_ACCESS_TOKEN: ${CONVERTER_ACCESS_TOKEN:-}
+      CONVERTER_MAX_UPLOAD_MB: ${CONVERTER_MAX_UPLOAD_MB:-4096}
+      CONVERTER_RETENTION_HOURS: ${CONVERTER_RETENTION_HOURS:-24}
+      CONVERTER_WORKERS: ${CONVERTER_WORKERS:-4}
+    volumes:
+      - jobs:/data
+
+volumes:
+  jobs:

@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D 도시모델 변환</title>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+<style>
+  :root {
+    --bg: #f2f4f6; --card: #ffffff; --field: #f2f4f6; --line: #e5e8eb;
+    --text: #191f28; --sub: #4e5968; --hint: #8b95a1;
+    --blue: #3182f6; --blue-press: #1b64da; --blue-soft: #e8f3ff; --on-blue: #ffffff;
+    --red: #f04452; --orange: #dd7d02; --thumb: #ffffff;
+    --shadow: 0 1px 3px rgba(0, 27, 55, .06);
+    --roof: #e5604a; --wall: #e0cf9f; --ground: #5f7184; --ceiling: #8b5cf6; --plain: #b0b8c1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17171c; --card: #202027; --field: #2c2c35; --line: #33333d;
+      --text: #f2f4f6; --sub: #b0b8c1; --hint: #8b95a1;
+      --blue: #4593fc; --blue-press: #3182f6; --blue-soft: #1e2a3d; --on-blue: #ffffff;
+      --red: #ff6b76; --orange: #ffb443; --thumb: #4e4e5a; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); word-break: keep-all;
+    font: 15px/1.55 "Pretendard", "Noto Sans KR", system-ui, sans-serif; letter-spacing: -0.01em; }
+
+  .hero { background: var(--card); }
+  .hero-inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 32px;
+    max-width: 1240px; margin: 0 auto; padding: 20px 24px 40px; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; max-width: 1240px; margin: 0 auto; padding: 12px 24px; }
+  .brand { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+  .hero h1 { margin: 0; font-size: clamp(34px, 4.6vw, 60px); line-height: 1.18; font-weight: 800; letter-spacing: -0.035em; }
+  .hero p { margin: 20px 0 0; max-width: 30em; font-size: 18px; color: var(--sub); }
+  .hero .formats { display: flex; flex-wrap: wrap; gap: 8px; margin: 28px 0 0; padding: 0; list-style: none; }
+  .hero .formats li { padding: 7px 14px; border-radius: 999px; background: var(--field); color: var(--sub); font-size: 14px; font-weight: 600; }
+  .hero img { display: block; width: 100%; height: auto; }
+  .lang { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--field); }
+  .lang button { padding: 6px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--hint);
+    font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .lang button[aria-pressed=true] { background: var(--thumb); color: var(--text); box-shadow: 0 1px 3px rgba(0, 27, 55, .12); }
+  .lang button:focus-visible { outline: 2px solid var(--blue); }
+
+  /* 본문: 밝은 바탕, 테두리 없는 큰 카드, 한 카드에 한 주제 */
+  main { display: grid; grid-template-columns: minmax(340px, 440px) minmax(0, 1fr); gap: 16px; align-items: start;
+    max-width: 1240px; margin: 0 auto; padding: 24px 24px 40px; }
+  .form { display: grid; gap: 16px; }
+  .card { background: var(--card); border-radius: 24px; padding: 28px; box-shadow: var(--shadow); }
+  .card h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .field { margin-top: 22px; }
+  .label { display: block; margin-bottom: 8px; color: var(--sub); font-size: 14px; font-weight: 600; }
+  .note { margin: 8px 0 0; color: var(--hint); font-size: 13px; }
+  input[type=number], select { width: 100%; height: 48px; padding: 0 14px; border: 0; border-radius: 12px;
+    background: var(--field); color: var(--text); font: inherit; font-size: 16px; font-variant-numeric: tabular-nums; }
+  input[type=number]:focus-visible, select:focus-visible { outline: 2px solid var(--blue); outline-offset: 0; }
+  ::placeholder { color: var(--hint); }
+  .cols { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); align-items: end; }
+  .cols .label { margin-bottom: 6px; font-weight: 500; font-size: 13px; }
+
+  .seg { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--field); }
+  .seg label { flex: 1; position: relative; }
+  .seg input { position: absolute; opacity: 0; inset: 0; }
+  .seg span { display: block; text-align: center; padding: 9px 6px; border-radius: 10px; color: var(--sub);
+    font-size: 15px; font-weight: 600; cursor: pointer; }
+  .seg input:checked + span { background: var(--thumb); color: var(--text); box-shadow: 0 1px 4px rgba(0, 27, 55, .12); }
+  .seg input:focus-visible + span { outline: 2px solid var(--blue); }
+
+  .toggle { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; cursor: pointer; }
+  .toggle + .toggle { border-top: 1px solid var(--line); }
+  .toggle input { flex: none; appearance: none; width: 50px; height: 30px; margin: 0; border-radius: 15px;
+    background: var(--line); position: relative; cursor: pointer; transition: background .15s; }
+  .toggle input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); transition: transform .15s; }
+  .toggle input:checked { background: var(--blue); }
+  .toggle input:checked::after { transform: translateX(20px); }
+  .toggle input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .toggles { margin-top: 8px; }
+
+  #drop { margin-top: 18px; padding: 28px 16px; border-radius: 16px; background: var(--blue-soft); color: var(--blue);
+    text-align: center; font-weight: 700; font-size: 16px; cursor: pointer; }
+  #drop.over, #drop:focus-visible { outline: 2px solid var(--blue); }
+  #drop small { display: block; margin-top: 6px; color: var(--sub); font-weight: 400; font-size: 13px; }
+  #files { margin: 12px 0 0; padding: 0; list-style: none; max-height: 150px; overflow: auto; }
+  #files li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 14px; }
+  #files li span:last-child { color: var(--hint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  details.card summary { list-style: none; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+    font-size: 17px; font-weight: 700; }
+  details.card summary::-webkit-details-marker { display: none; }
+  details.card summary::after { content: ""; width: 9px; height: 9px; border-right: 2px solid var(--hint); border-bottom: 2px solid var(--hint);
+    transform: rotate(45deg); transition: transform .15s; }
+  details.card[open] summary::after { transform: rotate(-135deg); }
+
+  .cta { position: sticky; bottom: 0; margin-top: -16px; padding: 24px 0 16px; background: linear-gradient(transparent, var(--bg) 40%); }
+  .btn { display: block; width: 100%; height: 56px; border: 0; border-radius: 16px; cursor: pointer; text-align: center;
+    background: var(--blue); color: var(--on-blue); font: inherit; font-size: 17px; font-weight: 700; line-height: 56px; text-decoration: none; }
+  .btn:hover { background: var(--blue-press); }
+  .btn:disabled { background: var(--line); color: var(--hint); cursor: default; }
+  .btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+  .result { position: sticky; top: 16px; }
+  main { padding-top: 16px; }
+  #status { margin-top: 10px; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.35; }
+  #status.idle { color: var(--hint); font-size: 16px; font-weight: 500; }
+  #status.error { color: var(--red); font-size: 17px; }
+  progress { appearance: none; width: 100%; height: 6px; margin-top: 16px; border: 0; border-radius: 3px; overflow: hidden; background: var(--field); }
+  progress::-webkit-progress-bar { background: var(--field); }
+  progress::-webkit-progress-value { background: var(--blue); border-radius: 3px; }
+  progress::-moz-progress-bar { background: var(--blue); }
+  #summary { margin: 6px 0 20px; color: var(--hint); font-size: 14px; }
+  #warnings { margin: 16px 0 0; padding: 0; list-style: none; color: var(--orange); font-size: 14px; }
+  .tablewrap { overflow: auto; max-height: 260px; margin-top: 24px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 10px 10px; text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; padding-left: 0; }
+  th { position: sticky; top: 0; background: var(--card); color: var(--hint); font-weight: 500; font-size: 13px; }
+  td { border-top: 1px solid var(--line); }
+  td:first-child { font-weight: 600; }
+  #viewer { margin-top: 20px; height: 420px; border-radius: 16px; overflow: hidden; background: var(--field); }
+  #viewer canvas { display: block; width: 100%; height: 100%; }
+  #legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 13px; color: var(--sub); }
+  #legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+
+  .tools { display: flex; align-items: center; gap: 8px; }
+  .text-btn { padding: 8px 12px; border: 0; border-radius: 10px; background: transparent; color: var(--sub);
+    font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .text-btn:hover { background: var(--field); }
+  .text-btn:focus-visible, .icon-btn:focus-visible { outline: 2px solid var(--blue); }
+  .icon-btn { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%;
+    background: var(--field); color: var(--sub); cursor: pointer; }
+  #help { width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 28px; border: 0; border-radius: 24px;
+    background: var(--card); color: var(--text); box-shadow: 0 8px 40px rgba(0, 0, 0, .16); }
+  #help::backdrop { background: rgba(0, 0, 0, .45); }
+  .help-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .help-head h2 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.3; }
+  .help-lead { margin: 8px 0 0; color: var(--sub); font-size: 16px; }
+  .help-hero { display: block; width: 100%; height: auto; margin-top: 16px; border-radius: 16px; background: #f2f4f6; }
+  .help-sub { margin: 28px 0 0; font-size: 18px; font-weight: 700; }
+  .steps { list-style: none; margin: 4px 0 0; padding: 0; }
+  .steps li { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: center; padding: 16px 0; }
+  .steps li + li { border-top: 1px solid var(--line); }
+  .steps img { display: block; width: 100%; height: auto; border-radius: 14px; background: #f2f4f6; }
+  .steps h4 { margin: 0; font-size: 16px; font-weight: 700; }
+  .steps p { margin: 4px 0 0; color: var(--sub); }
+  @media (max-width: 600px) { .steps li { grid-template-columns: 1fr; } }
+
+  #gate { width: min(400px, calc(100vw - 32px)); padding: 32px 28px 28px; border: 0; border-radius: 24px;
+    background: var(--card); color: var(--text); box-shadow: 0 8px 40px rgba(0, 27, 55, .12); }
+  #gate::backdrop { background: var(--bg); }
+  #gate h2 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.35; }
+  #gate p { margin: 8px 0 24px; color: var(--sub); }
+  #gate input { width: 100%; height: 52px; padding: 0 16px; border: 0; border-radius: 14px; background: var(--field);
+    color: var(--text); font: inherit; font-size: 17px; }
+  #gate input:focus-visible { outline: 2px solid var(--blue); }
+  #gateError { min-height: 1.6em; margin: 8px 0 12px; color: var(--red); font-size: 14px; }
+
+  @media (max-width: 900px) {
+    .topbar { padding: 10px 16px; }
+    .hero-inner { grid-template-columns: 1fr; padding: 24px 16px 24px; gap: 16px; }
+    main { grid-template-columns: 1fr; padding: 16px 16px 32px; }
+    .result { position: static; }
+    .card { padding: 24px 20px; border-radius: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<dialog id="gate" aria-labelledby="gateTitle">
+  <form id="gateForm">
+    <h2 id="gateTitle" data-i18n="gateTitle">접속 토큰을 입력해 주세요</h2>
+    <p data-i18n="gateBody">관리자에게 받은 토큰이 있어야 변환기를 쓸 수 있어요.</p>
+    <input id="gateToken" type="password" autocomplete="current-password" required data-i18n-ph="gateLabel" data-i18n-aria="gateLabel" placeholder="토큰">
+    <div id="gateError" role="alert"></div>
+    <button id="gateSubmit" class="btn" data-i18n="gateSubmit">입장하기</button>
+  </form>
+</dialog>
+
+<dialog id="help" aria-labelledby="helpTitle">
+  <div class="help-head">
+    <h2 id="helpTitle" data-i18n="heroTitle">3D 모델을 올리면 CityGML 건물이 돼요</h2>
+    <button type="button" id="helpClose" class="icon-btn" data-i18n-aria="close" aria-label="닫기">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <p class="help-lead" data-i18n="heroBody">지붕, 벽, 바닥을 알아서 구분하고 좌표계와 텍스처까지 함께 기록해요.</p>
+  <img class="help-hero" src="img/hero.png" alt="" width="1280" height="820">
+  <h3 class="help-sub" data-i18n="stepsTitle">이렇게 변환해요</h3>
+  <ol class="steps">
+    <li><img src="img/split.png" alt="" width="1200" height="760" loading="lazy">
+      <div><h4 data-i18n="step1">건물 단위로 나눠요</h4>
+      <p data-i18n="step1Body">객체 이름이나 서로 떨어진 덩어리를 기준으로 메시를 건물 하나하나로 분리합니다.</p></div></li>
+    <li><img src="img/classify.png" alt="" width="1200" height="760" loading="lazy">
+      <div><h4 data-i18n="step2">지붕, 벽, 바닥을 구분해요</h4>
+      <p data-i18n="step2Body">면이 향하는 방향을 보고 경계면 종류를 정하고, 닫힌 형상은 입체로 기록합니다.</p></div></li>
+    <li><img src="img/georef.png" alt="" width="1200" height="760" loading="lazy">
+      <div><h4 data-i18n="step3">실제 좌표에 올려요</h4>
+      <p data-i18n="step3Body">기준점과 배율을 적용해 지정한 좌표계로 옮기고, 필요하면 다른 좌표계로 다시 투영합니다.</p></div></li>
+  </ol>
+</dialog>
+
+<header class="hero" id="hero">
+  <div class="topbar">
+    <span class="brand" data-i18n="title">3D 도시모델 변환</span>
+    <div class="tools">
+      <button type="button" id="helpOpen" class="text-btn" data-i18n="help">도움말</button>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="ko">KOR</button>
+        <button type="button" data-lang="en">ENG</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="form">
+    <section class="card">
+      <h2 data-i18n="fileTitle">어떤 파일을 변환할까요?</h2>
+      <div id="drop" tabindex="0" role="button">
+        <span data-i18n="dropMain">파일을 끌어 놓거나 눌러서 선택</span>
+        <small data-i18n="dropSub">obj, 3ds와 mtl, 텍스처 이미지를 함께 올리거나 zip 하나로 올려 주세요</small>
+      </div>
+      <input id="picker" type="file" multiple hidden>
+      <ul id="files"></ul>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="outFormat">출력 형식</h2>
+      <div class="field">
+        <span class="label" data-i18n="version">CityGML 버전</span>
+        <div class="seg">
+          <label><input type="radio" name="version" value="2.0" checked><span>2.0</span></label>
+          <label><input type="radio" name="version" value="3.0"><span>3.0</span></label>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label" data-i18n="lod">상세 수준</span>
+        <div class="seg">
+          <label><input type="radio" name="lod" value="2" checked><span>LoD2</span></label>
+          <label><input type="radio" name="lod" value="3"><span>LoD3</span></label>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label" data-i18n="fileLayout">파일 구성</span>
+        <div class="seg">
+          <label><input type="radio" name="output" value="merged" checked><span data-i18n="merged">하나로 합치기</span></label>
+          <label><input type="radio" name="output" value="per_file"><span data-i18n="perFile">모델 파일별</span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="coords">좌표</h2>
+      <div class="field">
+        <label class="label" for="epsg" data-i18n="epsg">출력 좌표계 EPSG</label>
+        <input id="epsg" type="number" value="5186">
+      </div>
+      <div class="field">
+        <span class="label" data-i18n="origin">기준점</span>
+        <div class="cols">
+          <label><span class="label">X</span><input id="offset_x" type="number" step="any" value="0"></label>
+          <label><span class="label">Y</span><input id="offset_y" type="number" step="any" value="0"></label>
+          <label><span class="label">Z</span><input id="offset_z" type="number" step="any" value="0"></label>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label" data-i18n="upAxis">모델의 위쪽 축</span>
+        <div class="seg">
+          <label><input type="radio" name="up_axis" value="y" checked><span data-i18n="yUp">Y가 위</span></label>
+          <label><input type="radio" name="up_axis" value="z"><span data-i18n="zUp">Z가 위</span></label>
+        </div>
+        <p class="note" data-i18n="upHint">3ds는 읽을 때 Y가 위로 맞춰지므로 그대로 둡니다. obj는 만든 도구에 따라 다릅니다.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="buildings">건물 구성</h2>
+      <div class="field">
+        <label class="label" for="split" data-i18n="splitBy">건물 나누는 기준</label>
+        <select id="split">
+          <option value="object" data-i18n="splitObject">모델 안의 객체별</option>
+          <option value="component" data-i18n="splitComponent">서로 떨어진 덩어리별</option>
+          <option value="single" data-i18n="splitSingle">파일 전체를 건물 하나로</option>
+        </select>
+      </div>
+      <div class="toggles">
+        <label class="toggle"><span data-i18n="semantics">지붕·벽·바닥면 자동 분류</span><input id="semantics" type="checkbox" checked></label>
+        <label class="toggle"><span data-i18n="textures">텍스처 포함</span><input id="textures" type="checkbox" checked></label>
+      </div>
+    </section>
+
+    <details class="card">
+      <summary data-i18n="advanced">상세 설정</summary>
+      <div class="field">
+        <label class="label" for="src_epsg" data-i18n="srcEpsg">원본 좌표계 EPSG (다를 때만)</label>
+        <input id="src_epsg" type="number" data-i18n-ph="srcEpsgPh" placeholder="비워 두면 변환 안 함">
+      </div>
+      <div class="field cols">
+        <label><span class="label" data-i18n="scale">단위 배율 (모델 단위 → m)</span><input id="scale" type="number" step="any" value="1"></label>
+        <label><span class="label" data-i18n="precision">소수 자릿수</span><input id="precision" type="number" min="0" max="9" value="3"></label>
+      </div>
+      <div class="field">
+        <label class="label" for="wall_angle" data-i18n="wallAngle">벽으로 보는 기울기 한계 (도)</label>
+        <input id="wall_angle" type="number" min="1" max="89" step="any" value="15">
+      </div>
+      <div class="toggles">
+        <label class="toggle"><span data-i18n="merge">같은 평면의 삼각형을 하나의 면으로 병합</span><input id="merge_coplanar" type="checkbox" checked></label>
+        <label class="toggle"><span data-i18n="fixNormals">면 방향을 바깥쪽으로 보정</span><input id="fix_normals" type="checkbox" checked></label>
+        <label class="toggle"><span data-i18n="materials">재질 색상 포함</span><input id="materials" type="checkbox" checked></label>
+      </div>
+    </details>
+
+    <div class="cta"><button id="run" class="btn" disabled data-i18n="run">변환하기</button></div>
+  </div>
+
+  <section class="card result">
+    <h2 data-i18n="resultTitle">결과</h2>
+    <div id="status" class="idle"></div>
+    <progress id="bar" max="1" value="0" hidden></progress>
+    <div id="result" hidden>
+      <p id="summary"></p>
+      <a id="download" class="btn" href="#" data-i18n="download">결과 내려받기</a>
+      <ul id="warnings"></ul>
+      <div class="tablewrap">
+        <table>
+          <thead><tr>
+            <th data-i18n="thBuilding">건물</th><th data-i18n="thTris">삼각형</th><th data-i18n="thPolys">면</th>
+            <th data-i18n="thSurfaces">경계면</th><th data-i18n="thHeight">높이(m)</th><th data-i18n="thSolid">닫힌 입체</th>
+            <th data-i18n="roof">지붕</th><th data-i18n="wall">벽</th><th data-i18n="ground">바닥</th><th data-i18n="ceiling">외부 천장</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div id="viewer"></div>
+      <div id="legend">
+        <span><i style="background:var(--roof)"></i><span data-i18n="roof">지붕</span></span>
+        <span><i style="background:var(--wall)"></i><span data-i18n="wall">벽</span></span>
+        <span><i style="background:var(--ground)"></i><span data-i18n="ground">바닥</span></span>
+        <span><i style="background:var(--ceiling)"></i><span data-i18n="ceiling">외부 천장</span></span>
+        <span><i style="background:var(--plain)"></i><span data-i18n="plain">분류 안 함</span></span>
+        <span id="previewNote"></span>
+      </div>
+    </div>
+  </section>
+</main>
+
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from './vendor/OrbitControls.js';
+
+const T = {
+  ko: {
+    title: '3D 도시모델 변환',
+    heroTitle: '3D 모델을 올리면 CityGML 건물이 돼요',
+    heroBody: '지붕, 벽, 바닥을 알아서 구분하고 좌표계와 텍스처까지 함께 기록해요.',
+    fileTitle: '어떤 파일을 변환할까요?', dropMain: '파일을 끌어 놓거나 눌러서 선택',
+    dropSub: 'obj, 3ds와 mtl, 텍스처 이미지를 함께 올리거나 zip 하나로 올려 주세요',
+    outFormat: '출력 형식', version: 'CityGML 버전', lod: '상세 수준', fileLayout: '파일 구성',
+    merged: '하나로 합치기', perFile: '모델 파일별',
+    coords: '좌표', epsg: '출력 좌표계 EPSG', srcEpsg: '원본 좌표계 EPSG (다를 때만)', srcEpsgPh: '비워 두면 변환 안 함',
+    origin: '기준점', upAxis: '모델의 위쪽 축', yUp: 'Y가 위', zUp: 'Z가 위',
+    upHint: '3ds는 읽을 때 Y가 위로 맞춰지므로 그대로 둡니다. obj는 만든 도구에 따라 다릅니다.',
+    scale: '단위 배율 (모델 단위 → m)', precision: '소수 자릿수',
+    buildings: '건물 구성', splitBy: '건물 나누는 기준', splitObject: '모델 안의 객체별',
+    splitComponent: '서로 떨어진 덩어리별', splitSingle: '파일 전체를 건물 하나로',
+    semantics: '지붕·벽·바닥면 자동 분류', wallAngle: '벽으로 보는 기울기 한계 (도)',
+    merge: '같은 평면의 삼각형을 하나의 면으로 병합', fixNormals: '면 방향을 바깥쪽으로 보정',
+    textures: '텍스처 포함', materials: '재질 색상 포함', advanced: '상세 설정', run: '변환하기', help: '도움말', close: '닫기',
+    resultTitle: '결과', download: '결과 내려받기',
+    gateTitle: '접속 토큰을 입력해 주세요', gateBody: '관리자에게 받은 토큰이 있어야 변환기를 쓸 수 있어요.', gateLabel: '토큰',
+    gateSubmit: '입장하기', gateWrong: '토큰이 맞지 않아요. 다시 확인해 주세요.', gateExpired: '접속이 만료됐어요. 토큰을 다시 입력해 주세요.',
+    stepsTitle: '이렇게 변환해요', step1: '건물 단위로 나눠요', step2: '지붕, 벽, 바닥을 구분해요', step3: '실제 좌표에 올려요',
+    step1Body: '객체 이름이나 서로 떨어진 덩어리를 기준으로 메시를 건물 하나하나로 분리합니다.',
+    step2Body: '면이 향하는 방향을 보고 경계면 종류를 정하고, 닫힌 형상은 입체로 기록합니다.',
+    step3Body: '기준점과 배율을 적용해 지정한 좌표계로 옮기고, 필요하면 다른 좌표계로 다시 투영합니다.',
+    thBuilding: '건물', thTris: '삼각형', thPolys: '면', thSurfaces: '경계면', thHeight: '높이(m)', thSolid: '닫힌 입체',
+    roof: '지붕', wall: '벽', ground: '바닥', ceiling: '외부 천장', plain: '분류 안 함',
+    idle: '파일을 올리고 변환하면 결과가 여기에 나와요.', uploading: '올리는 중이에요', working: '변환하는 중이에요',
+    done: '건물 {n}동을 CityGML {version} LoD{lod}로 변환했어요', seconds: '{s}초',
+    yes: '예', no: '아니오', requestFailed: '요청에 실패했어요 ({code})', statusFailed: '상태를 읽지 못했어요',
+    previewPartial: '미리보기는 삼각형 {total}개 중 {shown}개만 보여 줘요',
+    previewFailed: '미리보기를 그리지 못했어요: {msg}',
+  },
+  en: {
+    title: '3D City Model Converter',
+    heroTitle: 'Upload a 3D model, get CityGML buildings',
+    heroBody: 'Roofs, walls and ground are told apart for you, with coordinate system and textures written alongside.',
+    fileTitle: 'Which files should we convert?', dropMain: 'Drop files here or click to choose',
+    dropSub: 'Upload obj or 3ds together with mtl and texture images, or as a single zip',
+    outFormat: 'Output format', version: 'CityGML version', lod: 'Level of detail', fileLayout: 'File layout',
+    merged: 'Merge into one', perFile: 'One per model file',
+    coords: 'Coordinates', epsg: 'Output CRS (EPSG)', srcEpsg: 'Source CRS (EPSG, if different)', srcEpsgPh: 'Leave empty to skip',
+    origin: 'Origin', upAxis: 'Up axis of the model', yUp: 'Y is up', zUp: 'Z is up',
+    upHint: '3ds files are read as Y-up, so leave this as is. For obj it depends on the authoring tool.',
+    scale: 'Unit scale (model unit → m)', precision: 'Decimal places',
+    buildings: 'Buildings', splitBy: 'Split buildings by', splitObject: 'Object in the model',
+    splitComponent: 'Disconnected part', splitSingle: 'Whole file as one building',
+    semantics: 'Classify roof, wall and ground', wallAngle: 'Max tilt treated as wall (degrees)',
+    merge: 'Merge coplanar triangles into one polygon', fixNormals: 'Orient faces outward',
+    textures: 'Include textures', materials: 'Include material colors', advanced: 'Advanced settings', run: 'Convert', help: 'Help', close: 'Close',
+    resultTitle: 'Result', download: 'Download result',
+    gateTitle: 'Enter your access token', gateBody: 'You need a token from the administrator to use the converter.', gateLabel: 'Token',
+    gateSubmit: 'Enter', gateWrong: 'That token is not valid. Check it and try again.', gateExpired: 'Your session expired. Enter the token again.',
+    stepsTitle: 'How it converts', step1: 'Split into buildings', step2: 'Tell roof, wall and ground apart', step3: 'Place on real coordinates',
+    step1Body: 'The mesh is separated into individual buildings by object name or by disconnected parts.',
+    step2Body: 'Each face is classified by the direction it faces, and closed shapes are written as solids.',
+    step3Body: 'Origin and scale move the model into the chosen coordinate system, with optional reprojection.',
+    thBuilding: 'Building', thTris: 'Triangles', thPolys: 'Polygons', thSurfaces: 'Surfaces', thHeight: 'Height (m)', thSolid: 'Closed solid',
+    roof: 'Roof', wall: 'Wall', ground: 'Ground', ceiling: 'Outer ceiling', plain: 'Unclassified',
+    idle: 'Upload files and convert. The result shows up here.', uploading: 'Uploading', working: 'Converting',
+    done: 'Converted {n} building(s) to CityGML {version} LoD{lod}', seconds: '{s} s',
+    yes: 'Yes', no: 'No', requestFailed: 'Request failed ({code})', statusFailed: 'Could not read job status',
+    previewPartial: 'Preview shows {shown} of {total} triangles',
+    previewFailed: 'Could not draw the preview: {msg}',
+  },
+};
+
+let lang = 'ko';
+let lastStatus = { key: 'idle', vars: {}, error: false, raw: null };
+let lastResult = null;
+const $ = (id) => document.getElementById(id);
+const t = (key, vars = {}) => (T[lang][key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+
+function setLang(next, remember = true) {
+  lang = T[next] ? next : 'ko';
+  document.documentElement.lang = lang;
+  document.title = t('title');
+  for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+  for (const el of document.querySelectorAll('[data-i18n-ph]')) el.placeholder = t(el.dataset.i18nPh);
+  for (const el of document.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
+  for (const b of document.querySelectorAll('.lang button')) b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
+  renderStatus();
+  if (lastResult) renderReport(lastResult);
+  if (remember) { try { localStorage.setItem('lang', lang); } catch { /* 저장 없이도 동작한다 */ } }
+}
+for (const b of document.querySelectorAll('.lang button')) b.addEventListener('click', () => setLang(b.dataset.lang));
+
+// 서버가 보낸 문장(진행 상황, 오류)은 raw로 그대로 보여 준다
+function setStatus(key, vars = {}, error = false, raw = null) {
+  lastStatus = { key, vars, error, raw };
+  renderStatus();
+}
+function renderStatus() {
+  $('status').textContent = lastStatus.raw ?? t(lastStatus.key, lastStatus.vars);
+  $('status').classList.toggle('error', lastStatus.error);
+  $('status').classList.toggle('idle', lastStatus.key === 'idle' && !lastStatus.raw);
+}
+
+// ---- 입장 토큰 ----
+const gate = $('gate');
+gate.addEventListener('cancel', (e) => e.preventDefault());
+function showGate(messageKey = null) {
+  $('gateError').textContent = messageKey ? t(messageKey) : '';
+  if (!gate.open) gate.showModal();
+  $('gateToken').focus();
+}
+$('gateForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('gateSubmit').disabled = true;
+  $('gateError').textContent = '';
+  try {
+    const res = await fetch('api/session', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: $('gateToken').value }),
+    });
+    if (res.ok) { $('gateToken').value = ''; gate.close(); }
+    else $('gateError').textContent = t('gateWrong');
+  } catch (err) {
+    $('gateError').textContent = err.message;
+  } finally {
+    $('gateSubmit').disabled = false;
+  }
+});
+async function checkSession() {
+  try {
+    const s = await (await fetch('api/session')).json();
+    if (s.required && !s.authenticated) showGate();
+  } catch { /* 서버에 닿지 않으면 변환 요청에서 오류가 드러난다 */ }
+}
+// API가 401을 주면 다시 토큰을 받는다
+async function api(url, init) {
+  const res = await fetch(url, init);
+  if (res.status === 401) { showGate('gateExpired'); throw new Error(t('gateExpired')); }
+  return res;
+}
+
+// ---- 도움말 ----
+const help = $('help');
+$('helpOpen').addEventListener('click', () => help.showModal());
+$('helpClose').addEventListener('click', () => help.close());
+help.addEventListener('click', (e) => { if (e.target === help) help.close(); });
+
+const drop = $('drop'), picker = $('picker'), runBtn = $('run');
+let selected = [];
+
+function showFiles() {
+  $('files').replaceChildren(...selected.map((f) => {
+    const li = document.createElement('li');
+    const name = Object.assign(document.createElement('span'), { textContent: f.path });
+    const size = Object.assign(document.createElement('span'), { textContent: `${(f.file.size / 1024).toFixed(1)} KB` });
+    li.append(name, size);
+    return li;
+  }));
+  runBtn.disabled = selected.length === 0;
+}
+
+function addFiles(items) {
+  for (const it of items) {
+    if (!selected.some((s) => s.path === it.path)) selected.push(it);
+  }
+  showFiles();
+}
+
+async function readEntry(entry, prefix = '') {
+  if (entry.isFile) {
+    const file = await new Promise((res, rej) => entry.file(res, rej));
+    return [{ file, path: prefix + file.name }];
+  }
+  const reader = entry.createReader();
+  const out = [];
+  for (;;) {
+    const batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+    if (!batch.length) break;
+    for (const child of batch) out.push(...await readEntry(child, `${prefix}${entry.name}/`));
+  }
+  return out;
+}
+
+drop.addEventListener('click', () => picker.click());
+drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); picker.click(); } });
+picker.addEventListener('change', () => {
+  addFiles([...picker.files].map((file) => ({ file, path: file.name })));
+  picker.value = '';
+});
+drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  drop.classList.remove('over');
+  const entries = [...e.dataTransfer.items].map((i) => i.webkitGetAsEntry?.()).filter(Boolean);
+  if (entries.length) {
+    const found = [];
+    for (const en of entries) found.push(...await readEntry(en));
+    addFiles(found);
+  } else {
+    addFiles([...e.dataTransfer.files].map((file) => ({ file, path: file.name })));
+  }
+});
+
+function options() {
+  const radio = (name) => document.querySelector(`input[name=${name}]:checked`).value;
+  const num = (id) => Number($(id).value);
+  const src = $('src_epsg').value.trim();
+  return {
+    version: radio('version'), lod: Number(radio('lod')), output: radio('output'), up_axis: radio('up_axis'),
+    epsg: num('epsg'), src_epsg: src ? Number(src) : null,
+    offset_x: num('offset_x'), offset_y: num('offset_y'), offset_z: num('offset_z'),
+    scale: num('scale'), precision: num('precision'), split: $('split').value,
+    semantics: $('semantics').checked, wall_angle: num('wall_angle'),
+    merge_coplanar: $('merge_coplanar').checked, fix_normals: $('fix_normals').checked,
+    textures: $('textures').checked, materials: $('materials').checked,
+  };
+}
+
+runBtn.addEventListener('click', async () => {
+  runBtn.disabled = true;
+  lastResult = null;
+  $('result').hidden = true;
+  $('bar').hidden = false;
+  $('bar').value = 0;
+  setStatus('uploading');
+  const body = new FormData();
+  for (const s of selected) body.append('files', s.file, s.path);
+  body.append('options', JSON.stringify(options()));
+  try {
+    const res = await api('api/jobs', { method: 'POST', body });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || t('requestFailed', { code: res.status }));
+    await poll(data.id);
+  } catch (err) {
+    setStatus('', {}, true, err.message);
+    $('bar').hidden = true;
+  } finally {
+    runBtn.disabled = selected.length === 0;
+  }
+});
+
+async function poll(id) {
+  for (;;) {
+    const res = await api(`api/jobs/${id}`);
+    const st = await res.json();
+    if (!res.ok) throw new Error(st.detail || t('statusFailed'));
+    $('bar').value = st.progress || 0;
+    if (st.state === 'error') throw new Error(st.message);
+    if (st.state === 'done') { await showResult(id, st.report); return; }
+    if (st.message) setStatus('', {}, false, st.message); else setStatus('working');
+    await new Promise((r) => setTimeout(r, 700));
+  }
+}
+
+function renderReport({ id, report }) {
+  const o = report.options;
+  setStatus('done', { version: o.version, lod: o.lod, n: report.buildings.length });
+  $('download').href = `api/jobs/${id}/download`;
+  const files = report.files.map((f) => `${f.name} ${(f.bytes / 1024 / 1024).toFixed(2)} MB`).join(', ');
+  $('summary').textContent = `${files}, ${t('seconds', { s: report.elapsed_seconds })}`;
+  const warnings = [...report.warnings];
+  for (const b of report.buildings) for (const w of b.warnings) warnings.push(`${b.name}: ${w}`);
+  $('warnings').replaceChildren(...warnings.map((w) => Object.assign(document.createElement('li'), { textContent: w })));
+  $('rows').replaceChildren(...report.buildings.map((b) => {
+    const c = b.class_triangles;
+    const cells = [b.name, b.triangles, b.polygons, b.surfaces, b.height, b.solid ? t('yes') : t('no'),
+      c.RoofSurface ?? 0, c.WallSurface ?? 0, c.GroundSurface ?? 0, c.OuterCeilingSurface ?? 0];
+    const tr = document.createElement('tr');
+    tr.append(...cells.map((v) => Object.assign(document.createElement('td'), { textContent: v })));
+    return tr;
+  }));
+}
+
+async function showResult(id, report) {
+  $('bar').hidden = true;
+  $('result').hidden = false;
+  lastResult = { id, report };
+  renderReport(lastResult);
+  try {
+    const res = await api(`api/jobs/${id}/preview`);
+    if (res.ok) drawPreview(await res.json());
+  } catch (err) {
+    $('previewNote').textContent = t('previewFailed', { msg: err.message });
+  }
+}
+
+// ---- 미리보기 ----
+let renderer, scene, camera, controls, meshObj;
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+function decode(b64, Type) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Type(bytes.buffer);
+}
+
+function drawPreview(data) {
+  const box = $('viewer');
+  if (!renderer) {
+    renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    box.append(renderer.domElement);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1e7);
+    camera.up.set(0, 0, 1);
+    controls = new OrbitControls(camera, renderer.domElement);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x8b95a1, 1.9));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.3);
+    sun.position.set(1, -2, 3);
+    scene.add(sun);
+    const resize = () => {
+      renderer.setSize(box.clientWidth, box.clientHeight, false);
+      camera.aspect = box.clientWidth / box.clientHeight;
+      camera.updateProjectionMatrix();
+    };
+    new ResizeObserver(resize).observe(box);
+    resize();
+    renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+  }
+  scene.background = new THREE.Color(css('--field'));
+  if (meshObj) { scene.remove(meshObj); meshObj.geometry.dispose(); meshObj.material.dispose(); }
+
+  const positions = decode(data.positions, Float32Array);
+  const classes = decode(data.classes, Uint8Array);
+  const palette = ['--roof', '--wall', '--ground', '--ceiling', '--plain'].map((n) => new THREE.Color(css(n)));
+  const colors = new Float32Array(positions.length);
+  for (let i = 0; i < classes.length; i++) {
+    const c = palette[classes[i]] ?? palette[4];
+    for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], i * 9 + k * 3);
+  }
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geom.computeVertexNormals();
+  meshObj = new THREE.Mesh(geom, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+  scene.add(meshObj);
+
+  const radius = Math.max(Math.hypot(...data.size) / 2, 1);
+  controls.target.set(0, 0, 0);
+  camera.position.set(radius * 1.9, -radius * 2.3, radius * 1.6);
+  camera.near = radius / 500;
+  camera.far = radius * 100;
+  camera.updateProjectionMatrix();
+  $('previewNote').textContent = data.shown_triangles < data.total_triangles
+    ? t('previewPartial', { total: data.total_triangles.toLocaleString(), shown: data.shown_triangles.toLocaleString() })
+    : '';
+}
+
+let initial = (navigator.language || 'ko').toLowerCase().startsWith('ko') ? 'ko' : 'en';
+try { initial = new URLSearchParams(location.search).get('lang') || localStorage.getItem('lang') || initial; } catch { /* 기본값 사용 */ }
+setLang(initial, false);
+checkSession();
+</script>
+</body>
+</html>
