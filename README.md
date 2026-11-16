@@ -30,7 +30,7 @@ Environment variables: `CONVERTER_DATA_DIR` (job folder, default `./data`), `CON
 ## Access token
 
 Set `CONVERTER_ACCESS_TOKEN` to ask for a token on the first screen.
-A correct token issues a cookie that lasts 12 hours. Without it, every API except `/api/health` returns 401.
+A correct token issues a session cookie that lasts 24 hours and is extended to 24 hours from the last use while you keep using the service. Without it, every API except `/api/health` returns 401.
 Leave it empty to allow access without a token.
 
 ## Layout
