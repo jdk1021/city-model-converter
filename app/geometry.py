@@ -109,6 +109,11 @@ def _face_groups(mesh: trimesh.Trimesh, cls: np.ndarray) -> np.ndarray:
 
 def _merge_facet(vertices, faces, normal):
     """동일 평면 삼각형 묶음을 (외곽 링, 구멍 링들) 목록으로 합친다. 실패하면 None."""
+    # 면 방향이 엇갈린 삼각형이 섞이면 평균 법선이 0에 가까워 평면을 정할 수 없다
+    length = float(np.linalg.norm(normal))
+    if not np.isfinite(length) or length < 1e-9:
+        return None
+    normal = normal / length
     vid = np.unique(faces)
     origin = vertices[vid[0]]
     helper = np.array([1.0, 0.0, 0.0]) if abs(normal[0]) < 0.9 else np.array([0.0, 1.0, 0.0])
@@ -120,8 +125,11 @@ def _merge_facet(vertices, faces, normal):
     lookup = np.full(int(vid.max()) + 1, -1, dtype=np.int64)
     lookup[vid] = np.arange(len(vid))
     tri2d = pts2d[lookup[faces]]
-    polys = shapely.polygons(tri2d)
-    merged = shapely.union_all(polys)
+    try:
+        polys = shapely.polygons(tri2d)
+        merged = shapely.union_all(polys)
+    except shapely.errors.GEOSException:
+        return None
     if merged.is_empty or not merged.is_valid:
         return None
     if abs(merged.area - float(shapely.area(polys).sum())) > 1e-6 * max(merged.area, 1e-12) + 1e-9:
