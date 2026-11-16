@@ -16,7 +16,7 @@ import numpy as np
 from PIL import Image
 
 from . import geometry
-from .citygml import VERSIONS, Writer
+from .citygml import FEATURES, VERSIONS, Writer
 from .loader import MODEL_SUFFIXES, load_scene
 
 PREVIEW_MAX_TRIANGLES = 400_000
@@ -25,6 +25,7 @@ PREVIEW_MAX_TRIANGLES = 400_000
 @dataclass
 class Options:
     version: str = "2.0"  # CityGML 버전: 2.0 | 3.0
+    feature: str = "building"  # CityGML 객체 종류: building | generic | furniture | vegetation
     epsg: int = 5186
     src_epsg: int | None = None  # 지정하면 offset 적용 뒤 epsg로 재투영
     up_axis: str = "y"  # 모델의 위쪽 축
@@ -46,6 +47,8 @@ class Options:
     def validate(self) -> None:
         if self.version not in VERSIONS:
             raise ValueError("version은 2.0 또는 3.0이어야 합니다")
+        if self.feature not in FEATURES:
+            raise ValueError(f"feature는 {', '.join(FEATURES)} 중 하나여야 합니다")
         if self.up_axis not in ("y", "z"):
             raise ValueError("up_axis는 y 또는 z여야 합니다")
         if self.lod not in (2, 3):
@@ -168,7 +171,8 @@ def _convert_group(job_dir, out_dir, out_name, models, opts: Options, progress, 
                 uvs,
                 mats,
                 textured,
-                semantics=opts.semantics,
+                # 지붕·벽·바닥 경계면은 건물에만 있다
+                semantics=opts.semantics and opts.feature == "building",
                 wall_angle=opts.wall_angle,
                 merge_coplanar=opts.merge_coplanar,
                 fix_normals=opts.fix_normals,
@@ -189,7 +193,7 @@ def _convert_group(job_dir, out_dir, out_name, models, opts: Options, progress, 
         ]
     )
     gml_path = out_dir / f"{out_name}.gml"
-    writer = Writer(gml_path, opts.version, opts.epsg, opts.lod, opts.precision, envelope)
+    writer = Writer(gml_path, opts.version, opts.epsg, opts.lod, opts.precision, envelope, opts.feature)
     for n, (b, materials) in enumerate(buildings, start=1):
         if n % 20 == 1:
             progress(f"쓰는 중: {out_name}.gml ({n}/{len(buildings)})")

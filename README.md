@@ -62,6 +62,10 @@ Option keys and defaults are in `Options` in `app/pipeline.py`.
   Anything else is written as MultiSurface only.
 - Textured faces are not merged, so their texture coordinates stay intact.
 - 3ds files are read as Y-up.
+- The feature type (`feature`) is building (default), generic object, city furniture or vegetation.
+  Roof, wall and ground surfaces and the height are written for buildings only. A generic object in 3.0 is `GenericOccupiedSpace`.
+- Files dropped on the page together are split into one job per model by reading `mtllib` in obj, `map_Kd` in mtl and texture names in 3ds.
+  The browser queue uploads the jobs one after another while the page stays open.
 
 ## Container and Dokploy
 
