@@ -1,4 +1,4 @@
-"""CityGML 2.0·3.0 작성기. 건물 단위로 흘려 쓰고 Appearance는 끝에 모아 쓴다.
+"""CityGML 2.0·3.0 작성기. 객체(건물·일반 객체·도시 시설물·식생) 단위로 흘려 쓰고 Appearance는 끝에 모아 쓴다.
 
 두 버전은 네임스페이스와 요소 배치가 달라 버전별 차이를 메서드 안에서 갈라 쓴다.
   - 2.0: GML 3.1.1, 경계면은 bldg:boundedBy/bldg:RoofSurface, 형상 속성은 bldg 네임스페이스
@@ -25,6 +25,8 @@ NAMESPACES = {
         "bldg": "http://www.opengis.net/citygml/building/2.0",
         "app": "http://www.opengis.net/citygml/appearance/2.0",
         "gen": "http://www.opengis.net/citygml/generics/2.0",
+        "frn": "http://www.opengis.net/citygml/cityfurniture/2.0",
+        "veg": "http://www.opengis.net/citygml/vegetation/2.0",
         "gml": "http://www.opengis.net/gml",
         "xlink": XLINK,
         "xsi": XSI,
@@ -35,6 +37,8 @@ NAMESPACES = {
         "con": "http://www.opengis.net/citygml/construction/3.0",
         "app": "http://www.opengis.net/citygml/appearance/3.0",
         "gen": "http://www.opengis.net/citygml/generics/3.0",
+        "frn": "http://www.opengis.net/citygml/cityfurniture/3.0",
+        "veg": "http://www.opengis.net/citygml/vegetation/3.0",
         "gml": "http://www.opengis.net/gml/3.2",
         "xlink": XLINK,
         "xsi": XSI,
@@ -47,22 +51,43 @@ SCHEMA_LOCATION = {
             "http://www.opengis.net/citygml/building/2.0 http://schemas.opengis.net/citygml/building/2.0/building.xsd",
             "http://www.opengis.net/citygml/appearance/2.0 http://schemas.opengis.net/citygml/appearance/2.0/appearance.xsd",
             "http://www.opengis.net/citygml/generics/2.0 http://schemas.opengis.net/citygml/generics/2.0/generics.xsd",
+            "http://www.opengis.net/citygml/cityfurniture/2.0 http://schemas.opengis.net/citygml/cityfurniture/2.0/cityFurniture.xsd",
+            "http://www.opengis.net/citygml/vegetation/2.0 http://schemas.opengis.net/citygml/vegetation/2.0/vegetation.xsd",
         ]
     ),
     "3.0": "http://www.opengis.net/citygml/profiles/base/3.0 "
     "http://schemas.opengis.net/citygml/profiles/base/3.0/CityGML.xsd",
 }
 VERSIONS = tuple(NAMESPACES)
+# 객체 종류 → 버전별 (네임스페이스, 요소 이름, gml:id 접두어). 3.0에는 GenericCityObject가 없어 GenericOccupiedSpace를 쓴다.
+FEATURES = {
+    "building": {"2.0": ("bldg", "Building"), "3.0": ("bldg", "Building"), "prefix": "BLDG"},
+    "generic": {"2.0": ("gen", "GenericCityObject"), "3.0": ("gen", "GenericOccupiedSpace"), "prefix": "GEN"},
+    "furniture": {"2.0": ("frn", "CityFurniture"), "3.0": ("frn", "CityFurniture"), "prefix": "FRN"},
+    "vegetation": {"2.0": ("veg", "SolitaryVegetationObject"), "3.0": ("veg", "SolitaryVegetationObject"), "prefix": "VEG"},
+}
 _XMLNS_DECL = re.compile(rb'\sxmlns:\w+="[^"]*"')
 
 
 class Writer:
     def __init__(
-        self, path: Path, version: str, epsg: int, lod: int, precision: int, envelope: np.ndarray
+        self,
+        path: Path,
+        version: str,
+        epsg: int,
+        lod: int,
+        precision: int,
+        envelope: np.ndarray,
+        feature: str = "building",
     ):
         if version not in NAMESPACES:
             raise ValueError(f"지원하지 않는 CityGML 버전입니다: {version}")
+        if feature not in FEATURES:
+            raise ValueError(f"지원하지 않는 객체 종류입니다: {feature}")
         self.v3 = version == "3.0"
+        self.feature = feature
+        self._feature_tag = FEATURES[feature][version]
+        self._id_prefix = FEATURES[feature]["prefix"]
         self.ns = NAMESPACES[version]
         self.srs = f"urn:ogc:def:crs:EPSG::{epsg}"
         self.lod = lod
@@ -126,11 +151,15 @@ class Writer:
         return self._sub(exterior, "gml", "Shell" if self.v3 else "CompositeSurface")
 
     def add_building(self, b: Building, poly_appearance) -> None:
-        """poly_appearance(poly) → (텍스처 URI | None, 색상 | None)"""
-        bid = "BLDG_" + uuid.uuid4().hex
+        """객체 하나를 쓴다. 요소 종류는 Writer의 feature를 따른다.
+
+        poly_appearance(poly) → (텍스처 URI | None, 색상 | None)
+        """
+        is_building = self.feature == "building"
+        bid = f"{self._id_prefix}_{uuid.uuid4().hex}"
         lod = self.lod
         member = etree.Element(self.q("core", "cityObjectMember"), nsmap=self.ns)
-        bldg = etree.SubElement(member, self.q("bldg", "Building"), {self._gml_id: bid})
+        bldg = etree.SubElement(member, self.q(*self._feature_tag), {self._gml_id: bid})
         self._sub(bldg, "gml", "name", b.name)
         bldg.append(self._envelope(b.bbox))
         if self.v3:
@@ -140,7 +169,8 @@ class Writer:
         else:
             attr = self._sub(bldg, "gen", "stringAttribute", name="source_file")
             self._sub(attr, "gen", "value", b.source)
-            self._sub(bldg, "bldg", "measuredHeight", self._fmt % b.height, uom="m")
+            if is_building:
+                self._sub(bldg, "bldg", "measuredHeight", self._fmt % b.height, uom="m")
 
         ids = [f"{bid}_p{i}" for i in range(len(b.polygons))]
         for pid, poly in zip(ids, b.polygons):
@@ -150,9 +180,13 @@ class Writer:
             elif color is not None:
                 self.colors.setdefault(color, []).append(pid)
 
-        semantic = any(p.cls in CLASS_ELEMENT for p in b.polygons)
-        solid_tag = self.q(self._geom_ns, f"lod{lod}Solid")
-        multi_tag = self.q(self._geom_ns, f"lod{lod}MultiSurface")
+        semantic = is_building and any(p.cls in CLASS_ELEMENT for p in b.polygons)
+        if self.v3 or is_building:
+            solid_tag = self.q(self._geom_ns, f"lod{lod}Solid")
+            multi_tag = self.q(self._geom_ns, f"lod{lod}MultiSurface")
+        else:
+            # 2.0의 건물 외 종류는 형상 속성이 lodNGeometry 하나라 Solid나 MultiSurface를 그 안에 넣는다
+            solid_tag = multi_tag = self.q(self._feature_tag[0], f"lod{lod}Geometry")
 
         def solid_by_reference():
             prop = etree.Element(solid_tag)
@@ -202,7 +236,7 @@ class Writer:
             for pid, poly in zip(ids, b.polygons):
                 self._polygon(ms, pid, poly)
 
-        if self.v3:
+        if self.v3 and is_building:
             height = self._sub(self._sub(bldg, "con", "height"), "con", "Height")
             self._sub(height, "con", "highReference", "highestRoofEdge")
             self._sub(height, "con", "lowReference", "lowestGroundPoint")

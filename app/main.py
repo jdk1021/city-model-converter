@@ -30,8 +30,12 @@ WORKERS = int(os.environ.get("CONVERTER_WORKERS", "4"))
 # 입장 토큰. 비어 있으면 토큰 없이 쓸 수 있다.
 ACCESS_TOKEN = os.environ.get("CONVERTER_ACCESS_TOKEN", "").strip()
 SESSION_COOKIE = "converter_session"
-SESSION_SECONDS = 12 * 3600
-_SESSION_VALUE = hashlib.sha256(f"converter-session:{ACCESS_TOKEN}".encode()).hexdigest()
+# 세션은 마지막 사용 시점부터 24시간 유지된다. 요청마다 쿠키를 새로 쓰지 않도록
+# 발급 뒤 SESSION_RENEW_AFTER가 지난 세션만 요청이 들어올 때 다시 24시간으로 연장한다.
+SESSION_SECONDS = 24 * 3600
+SESSION_RENEW_AFTER = 10 * 60
+# 쿠키 값은 "만료시각.서명"이다. 서명 키가 토큰에서 나오므로 토큰을 바꾸면 모든 세션이 끝난다.
+_SESSION_KEY = hashlib.sha256(f"converter-session:{ACCESS_TOKEN}".encode()).digest()
 _OPEN_PATHS = {"/api/health", "/api/session"}
 
 _pool: ProcessPoolExecutor | None = None
@@ -117,19 +121,49 @@ def _parse_options(raw: str) -> dict:
     return {f.name: getattr(opts, f.name) for f in fields(opts)}
 
 
-def _authenticated(request: Request) -> bool:
-    if not ACCESS_TOKEN:
-        return True
+def _session_cookie(expires: int) -> str:
+    sig = hmac.new(_SESSION_KEY, str(expires).encode(), hashlib.sha256).hexdigest()
+    return f"{expires}.{sig}"
+
+
+def _session_expiry(request: Request) -> int | None:
+    """유효한 세션 쿠키의 만료 시각. 없거나 위조됐거나 만료됐으면 None."""
     cookie = request.cookies.get(SESSION_COOKIE, "")
-    return hmac.compare_digest(cookie, _SESSION_VALUE)
+    expires, _, _ = cookie.partition(".")
+    if not expires.isdigit() or not hmac.compare_digest(cookie, _session_cookie(int(expires))):
+        return None
+    return int(expires) if int(expires) > time.time() else None
+
+
+def _authenticated(request: Request) -> bool:
+    return not ACCESS_TOKEN or _session_expiry(request) is not None
+
+
+def _issue_session(request: Request, response: Response) -> None:
+    response.set_cookie(
+        SESSION_COOKIE,
+        _session_cookie(int(time.time()) + SESSION_SECONDS),
+        max_age=SESSION_SECONDS,
+        httponly=True,
+        samesite="lax",
+        secure=request.url.scheme == "https",
+    )
 
 
 @app.middleware("http")
 async def require_token(request: Request, call_next):
     path = request.url.path
-    if path.startswith("/api/") and path not in _OPEN_PATHS and not _authenticated(request):
+    if not ACCESS_TOKEN or not path.startswith("/api/"):
+        return await call_next(request)
+    expires = _session_expiry(request)
+    if expires is None and path not in _OPEN_PATHS:
         return JSONResponse({"detail": "토큰이 필요합니다"}, status_code=401)
-    return await call_next(request)
+    response = await call_next(request)
+    # 토큰 입력(POST /api/session)은 직접 쿠키를 발급하므로 연장하지 않는다
+    renew = expires is not None and expires - time.time() < SESSION_SECONDS - SESSION_RENEW_AFTER
+    if renew and not (path == "/api/session" and request.method == "POST"):
+        _issue_session(request, response)
+    return response
 
 
 @app.get("/api/session")
@@ -144,14 +178,7 @@ async def session_open(request: Request, response: Response, token: str = Body(.
         await asyncio.sleep(1)  # 무차별 대입을 늦춘다
         raise HTTPException(401, "토큰이 올바르지 않습니다")
     if ACCESS_TOKEN:
-        response.set_cookie(
-            SESSION_COOKIE,
-            _SESSION_VALUE,
-            max_age=SESSION_SECONDS,
-            httponly=True,
-            samesite="lax",
-            secure=request.url.scheme == "https",
-        )
+        _issue_session(request, response)
     return {"authenticated": True}
 
 
@@ -223,6 +250,16 @@ def job_preview(job_id: str):
     if not path.exists():
         raise HTTPException(404, "미리보기가 없습니다")
     return FileResponse(path, media_type="application/json")
+
+
+@app.get("/api/jobs/{job_id}/texture/{name:path}")
+def job_texture(job_id: str, name: str):
+    """미리보기가 쓰는 텍스처 이미지. 출력 폴더 안의 jpg·png만 내준다."""
+    out_dir = _job_dir(job_id) / "output"
+    path = _safe_target(out_dir, name)
+    if path is None or path.suffix.lower() not in (".jpg", ".jpeg", ".png") or not path.is_file():
+        raise HTTPException(404, "텍스처를 찾을 수 없습니다")
+    return FileResponse(path)
 
 
 app.mount("/", StaticFiles(directory=ROOT / "static", html=True), name="static")

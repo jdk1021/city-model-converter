@@ -30,7 +30,7 @@ Environment variables: `CONVERTER_DATA_DIR` (job folder, default `./data`), `CON
 ## Access token
 
 Set `CONVERTER_ACCESS_TOKEN` to ask for a token on the first screen.
-A correct token issues a cookie that lasts 12 hours. Without it, every API except `/api/health` returns 401.
+A correct token issues a session cookie that lasts 24 hours and is extended to 24 hours from the last use while you keep using the service. Without it, every API except `/api/health` returns 401.
 Leave it empty to allow access without a token.
 
 ## Layout
@@ -62,6 +62,10 @@ Option keys and defaults are in `Options` in `app/pipeline.py`.
   Anything else is written as MultiSurface only.
 - Textured faces are not merged, so their texture coordinates stay intact.
 - 3ds files are read as Y-up.
+- The feature type (`feature`) is building (default), generic object, city furniture or vegetation.
+  Roof, wall and ground surfaces and the height are written for buildings only. A generic object in 3.0 is `GenericOccupiedSpace`.
+- Files dropped on the page together are split into one job per model by reading `mtllib` in obj, `map_Kd` in mtl and texture names in 3ds.
+  The browser queue uploads the jobs one after another while the page stays open.
 
 ## Container and Dokploy
 

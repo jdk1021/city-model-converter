@@ -77,15 +77,22 @@
   .toggle input:checked { background: var(--blue); }
   .toggle input:checked::after { transform: translateX(20px); }
   .toggle input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .toggle.off { opacity: .45; cursor: default; }
+  .toggle.off input { cursor: default; }
   .toggles { margin-top: 8px; }
 
   #drop { margin-top: 18px; padding: 28px 16px; border-radius: 16px; background: var(--blue-soft); color: var(--blue);
     text-align: center; font-weight: 700; font-size: 16px; cursor: pointer; }
   #drop.over, #drop:focus-visible { outline: 2px solid var(--blue); }
   #drop small { display: block; margin-top: 6px; color: var(--sub); font-weight: 400; font-size: 13px; }
-  #files { margin: 12px 0 0; padding: 0; list-style: none; max-height: 150px; overflow: auto; }
+  #files { margin: 12px 0 0; padding: 0; list-style: none; max-height: 260px; overflow: auto; }
   #files li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 14px; }
-  #files li span:last-child { color: var(--hint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #files li > span:last-child { flex: none; color: var(--hint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #files .f-name { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+  #files .miss { color: var(--orange); font-size: 12px; }
+  #files li.unused { color: var(--hint); }
+  .files-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; }
+  #planNote { margin: 0; color: var(--sub); font-size: 14px; font-weight: 600; }
 
   details.card summary { list-style: none; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
     font-size: 17px; font-weight: 700; }
@@ -123,6 +130,35 @@
   #viewer canvas { display: block; width: 100%; height: 100%; }
   #legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 13px; color: var(--sub); }
   #legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+  #legend[data-mode="look"] .cls, #legend[data-mode="class"] .look { display: none; }
+  .viewmode { margin-top: 20px; max-width: 280px; }
+  .viewmode span { padding: 7px 6px; font-size: 14px; }
+  .viewmode + #viewer { margin-top: 10px; }
+
+  .queue-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  #queueSummary { margin: 6px 0 0; color: var(--hint); font-size: 14px; font-variant-numeric: tabular-nums; }
+  #queue { list-style: none; margin: 12px 0 0; padding: 0; max-height: 320px; overflow: auto; }
+  #queue:empty { display: none; }
+  .q-item { position: relative; display: flex; align-items: center; gap: 8px; padding: 10px 12px 12px; border-radius: 12px; }
+  .q-item[aria-current=true] { background: var(--field); }
+  .q-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 0; border: 0;
+    background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .q-main:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; border-radius: 6px; }
+  .q-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; }
+  .q-meta { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--hint); font-size: 12px;
+    font-variant-numeric: tabular-nums; }
+  .q-item[data-state=error] .q-meta { color: var(--red); }
+  .q-state { flex: none; color: var(--sub); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .q-item[data-state=done] .q-state { color: var(--blue); }
+  .q-item[data-state=error] .q-state { color: var(--red); }
+  .q-item[data-state=waiting] .q-state { color: var(--hint); }
+  .q-bar { position: absolute; left: 12px; right: 12px; bottom: 4px; height: 2px; border-radius: 1px; background: var(--line); overflow: hidden; }
+  .q-bar i { display: block; height: 100%; background: var(--blue); transform-origin: left; transition: transform .3s; }
+  .q-act { flex: none; padding: 4px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--sub);
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; }
+  .q-act:hover { background: var(--line); }
+  .q-act:focus-visible { outline: 2px solid var(--blue); }
+  .card .result-title { margin-top: 28px; }
 
   .tools { display: flex; align-items: center; gap: 8px; }
   .text-btn { padding: 8px 12px; border: 0; border-radius: 10px; background: transparent; color: var(--sub);
@@ -180,7 +216,7 @@
 
 <dialog id="help" aria-labelledby="helpTitle">
   <div class="help-head">
-    <h2 id="helpTitle" data-i18n="heroTitle">3D 모델을 올리면 CityGML 건물이 돼요</h2>
+    <h2 id="helpTitle" data-i18n="heroTitle">3D 모델을 올리면 CityGML 객체가 돼요</h2>
     <button type="button" id="helpClose" class="icon-btn" data-i18n-aria="close" aria-label="닫기">
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
     </button>
@@ -190,8 +226,8 @@
   <h3 class="help-sub" data-i18n="stepsTitle">이렇게 변환해요</h3>
   <ol class="steps">
     <li><img src="img/split.png" alt="" width="1200" height="760" loading="lazy">
-      <div><h4 data-i18n="step1">건물 단위로 나눠요</h4>
-      <p data-i18n="step1Body">객체 이름이나 서로 떨어진 덩어리를 기준으로 메시를 건물 하나하나로 분리합니다.</p></div></li>
+      <div><h4 data-i18n="step1">객체 단위로 나눠요</h4>
+      <p data-i18n="step1Body">객체 이름이나 서로 떨어진 덩어리를 기준으로 메시를 객체 하나하나로 분리합니다.</p></div></li>
     <li><img src="img/classify.png" alt="" width="1200" height="760" loading="lazy">
       <div><h4 data-i18n="step2">지붕, 벽, 바닥을 구분해요</h4>
       <p data-i18n="step2Body">면이 향하는 방향을 보고 경계면 종류를 정하고, 닫힌 형상은 입체로 기록합니다.</p></div></li>
@@ -220,10 +256,15 @@
       <h2 data-i18n="fileTitle">어떤 파일을 변환할까요?</h2>
       <div id="drop" tabindex="0" role="button">
         <span data-i18n="dropMain">파일을 끌어 놓거나 눌러서 선택</span>
-        <small data-i18n="dropSub">obj, 3ds와 mtl, 텍스처 이미지를 함께 올리거나 zip 하나로 올려 주세요</small>
+        <small data-i18n="dropSub">여러 모델과 mtl, 텍스처를 한꺼번에 넣으면 모델마다 알아서 나눠요. 폴더와 zip도 넣을 수 있어요</small>
       </div>
       <input id="picker" type="file" multiple hidden>
+      <div class="files-head" id="filesHead" hidden>
+        <p id="planNote"></p>
+        <button type="button" id="clearFiles" class="text-btn" data-i18n="clearFiles">선택 비우기</button>
+      </div>
       <ul id="files"></ul>
+      <label class="toggle" id="splitRow" hidden><span data-i18n="splitModels">모델마다 따로 변환</span><input id="splitModels" type="checkbox" checked></label>
     </section>
 
     <section class="card">
@@ -276,13 +317,23 @@
     </section>
 
     <section class="card">
-      <h2 data-i18n="buildings">건물 구성</h2>
+      <h2 data-i18n="buildings">객체 구성</h2>
       <div class="field">
-        <label class="label" for="split" data-i18n="splitBy">건물 나누는 기준</label>
+        <label class="label" for="feature" data-i18n="featureType">CityGML 객체 종류</label>
+        <select id="feature">
+          <option value="building" data-i18n="featBuilding">건물 (Building)</option>
+          <option value="generic" data-i18n="featGeneric">일반 객체 (Generic)</option>
+          <option value="furniture" data-i18n="featFurniture">도시 시설물 (CityFurniture)</option>
+          <option value="vegetation" data-i18n="featVegetation">식생 (SolitaryVegetationObject)</option>
+        </select>
+        <p class="note" id="featureNote" data-i18n="featureNote" hidden>지붕·벽·바닥 분류는 건물에서만 기록해요.</p>
+      </div>
+      <div class="field">
+        <label class="label" for="split" data-i18n="splitBy">객체 나누는 기준</label>
         <select id="split">
           <option value="object" data-i18n="splitObject">모델 안의 객체별</option>
           <option value="component" data-i18n="splitComponent">서로 떨어진 덩어리별</option>
-          <option value="single" data-i18n="splitSingle">파일 전체를 건물 하나로</option>
+          <option value="single" data-i18n="splitSingle">파일 전체를 객체 하나로</option>
         </select>
       </div>
       <div class="toggles">
@@ -312,11 +363,17 @@
       </div>
     </details>
 
-    <div class="cta"><button id="run" class="btn" disabled data-i18n="run">변환하기</button></div>
+    <div class="cta"><button id="run" class="btn" disabled data-i18n="run">대기열에 추가</button></div>
   </div>
 
   <section class="card result">
-    <h2 data-i18n="resultTitle">결과</h2>
+    <div class="queue-head">
+      <h2 data-i18n="queueTitle">작업 목록</h2>
+      <button type="button" id="clearDone" class="text-btn" data-i18n="clearDone" hidden>완료 항목 지우기</button>
+    </div>
+    <p id="queueSummary"></p>
+    <ol id="queue"></ol>
+    <h2 class="result-title" data-i18n="resultTitle">결과</h2>
     <div id="status" class="idle"></div>
     <progress id="bar" max="1" value="0" hidden></progress>
     <div id="result" hidden>
@@ -326,20 +383,25 @@
       <div class="tablewrap">
         <table>
           <thead><tr>
-            <th data-i18n="thBuilding">건물</th><th data-i18n="thTris">삼각형</th><th data-i18n="thPolys">면</th>
+            <th data-i18n="thBuilding">객체</th><th data-i18n="thTris">삼각형</th><th data-i18n="thPolys">면</th>
             <th data-i18n="thSurfaces">경계면</th><th data-i18n="thHeight">높이(m)</th><th data-i18n="thSolid">닫힌 입체</th>
             <th data-i18n="roof">지붕</th><th data-i18n="wall">벽</th><th data-i18n="ground">바닥</th><th data-i18n="ceiling">외부 천장</th>
           </tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
+      <div class="seg viewmode" role="radiogroup">
+        <label><input type="radio" name="viewmode" value="look" checked><span data-i18n="viewLook">텍스처·재질</span></label>
+        <label><input type="radio" name="viewmode" value="class"><span data-i18n="viewClass">면 분류</span></label>
+      </div>
       <div id="viewer"></div>
       <div id="legend">
-        <span><i style="background:var(--roof)"></i><span data-i18n="roof">지붕</span></span>
-        <span><i style="background:var(--wall)"></i><span data-i18n="wall">벽</span></span>
-        <span><i style="background:var(--ground)"></i><span data-i18n="ground">바닥</span></span>
-        <span><i style="background:var(--ceiling)"></i><span data-i18n="ceiling">외부 천장</span></span>
-        <span><i style="background:var(--plain)"></i><span data-i18n="plain">분류 안 함</span></span>
+        <span class="cls"><i style="background:var(--roof)"></i><span data-i18n="roof">지붕</span></span>
+        <span class="cls"><i style="background:var(--wall)"></i><span data-i18n="wall">벽</span></span>
+        <span class="cls"><i style="background:var(--ground)"></i><span data-i18n="ground">바닥</span></span>
+        <span class="cls"><i style="background:var(--ceiling)"></i><span data-i18n="ceiling">외부 천장</span></span>
+        <span class="cls"><i style="background:var(--plain)"></i><span data-i18n="plain">분류 안 함</span></span>
+        <span class="look" data-i18n="lookNote">텍스처·재질 색이 없는 면은 분류 색으로 보여 줘요</span>
         <span id="previewNote"></span>
       </div>
     </div>
@@ -354,66 +416,96 @@ import { OrbitControls } from './vendor/OrbitControls.js';
 const T = {
   ko: {
     title: '3D 도시모델 변환',
-    heroTitle: '3D 모델을 올리면 CityGML 건물이 돼요',
+    heroTitle: '3D 모델을 올리면 CityGML 객체가 돼요',
     heroBody: '지붕, 벽, 바닥을 알아서 구분하고 좌표계와 텍스처까지 함께 기록해요.',
     fileTitle: '어떤 파일을 변환할까요?', dropMain: '파일을 끌어 놓거나 눌러서 선택',
-    dropSub: 'obj, 3ds와 mtl, 텍스처 이미지를 함께 올리거나 zip 하나로 올려 주세요',
+    dropSub: '여러 모델과 mtl, 텍스처를 한꺼번에 넣으면 모델마다 알아서 나눠요. 폴더와 zip도 넣을 수 있어요',
     outFormat: '출력 형식', version: 'CityGML 버전', lod: '상세 수준', fileLayout: '파일 구성',
     merged: '하나로 합치기', perFile: '모델 파일별',
     coords: '좌표', epsg: '출력 좌표계 EPSG', srcEpsg: '원본 좌표계 EPSG (다를 때만)', srcEpsgPh: '비워 두면 변환 안 함',
     origin: '기준점', upAxis: '모델의 위쪽 축', yUp: 'Y가 위', zUp: 'Z가 위',
     upHint: '3ds는 읽을 때 Y가 위로 맞춰지므로 그대로 둡니다. obj는 만든 도구에 따라 다릅니다.',
     scale: '단위 배율 (모델 단위 → m)', precision: '소수 자릿수',
-    buildings: '건물 구성', splitBy: '건물 나누는 기준', splitObject: '모델 안의 객체별',
-    splitComponent: '서로 떨어진 덩어리별', splitSingle: '파일 전체를 건물 하나로',
+    buildings: '객체 구성', splitBy: '객체 나누는 기준', splitObject: '모델 안의 객체별',
+    splitComponent: '서로 떨어진 덩어리별', splitSingle: '파일 전체를 객체 하나로',
+    featureType: 'CityGML 객체 종류', featBuilding: '건물 (Building)', featGeneric: '일반 객체 (Generic)',
+    featFurniture: '도시 시설물 (CityFurniture)', featVegetation: '식생 (SolitaryVegetationObject)',
+    featureNote: '지붕·벽·바닥 분류는 건물에서만 기록해요.',
     semantics: '지붕·벽·바닥면 자동 분류', wallAngle: '벽으로 보는 기울기 한계 (도)',
     merge: '같은 평면의 삼각형을 하나의 면으로 병합', fixNormals: '면 방향을 바깥쪽으로 보정',
-    textures: '텍스처 포함', materials: '재질 색상 포함', advanced: '상세 설정', run: '변환하기', help: '도움말', close: '닫기',
+    textures: '텍스처 포함', materials: '재질 색상 포함', advanced: '상세 설정', help: '도움말', close: '닫기',
     resultTitle: '결과', download: '결과 내려받기',
     gateTitle: '접속 토큰을 입력해 주세요', gateBody: '관리자에게 받은 토큰이 있어야 변환기를 쓸 수 있어요.', gateLabel: '토큰',
     gateSubmit: '입장하기', gateWrong: '토큰이 맞지 않아요. 다시 확인해 주세요.', gateExpired: '접속이 만료됐어요. 토큰을 다시 입력해 주세요.',
-    stepsTitle: '이렇게 변환해요', step1: '건물 단위로 나눠요', step2: '지붕, 벽, 바닥을 구분해요', step3: '실제 좌표에 올려요',
-    step1Body: '객체 이름이나 서로 떨어진 덩어리를 기준으로 메시를 건물 하나하나로 분리합니다.',
+    stepsTitle: '이렇게 변환해요', step1: '객체 단위로 나눠요', step2: '지붕, 벽, 바닥을 구분해요', step3: '실제 좌표에 올려요',
+    step1Body: '객체 이름이나 서로 떨어진 덩어리를 기준으로 메시를 객체 하나하나로 분리합니다.',
     step2Body: '면이 향하는 방향을 보고 경계면 종류를 정하고, 닫힌 형상은 입체로 기록합니다.',
     step3Body: '기준점과 배율을 적용해 지정한 좌표계로 옮기고, 필요하면 다른 좌표계로 다시 투영합니다.',
-    thBuilding: '건물', thTris: '삼각형', thPolys: '면', thSurfaces: '경계면', thHeight: '높이(m)', thSolid: '닫힌 입체',
+    thBuilding: '객체', thTris: '삼각형', thPolys: '면', thSurfaces: '경계면', thHeight: '높이(m)', thSolid: '닫힌 입체',
     roof: '지붕', wall: '벽', ground: '바닥', ceiling: '외부 천장', plain: '분류 안 함',
-    idle: '파일을 올리고 변환하면 결과가 여기에 나와요.', uploading: '올리는 중이에요', working: '변환하는 중이에요',
-    done: '건물 {n}동을 CityGML {version} LoD{lod}로 변환했어요', seconds: '{s}초',
+    idle: '파일을 넣고 대기열에 추가하면 차례대로 변환해요. 이 창을 열어 두는 동안 계속 진행돼요.',
+    uploading: '올리는 중이에요', working: '변환하는 중이에요',
+    run: '대기열에 추가', runN: '작업 {n}개를 대기열에 추가', clearFiles: '선택 비우기', splitModels: '모델마다 따로 변환',
+    analyzing: '파일을 살펴보는 중이에요', planJobs: '작업 {n}개로 나눴어요', planOne: '작업 1개로 변환해요',
+    planNone: 'obj, 3ds, zip 파일이 없어요', filesN: '파일 {n}개', missingTex: '없는 파일: {names}',
+    unusedN: '쓰이지 않는 파일 {n}개', andMore: '{name} 외 {n}개',
+    queueTitle: '작업 목록', clearDone: '완료 항목 지우기',
+    queueSummary: '대기 {waiting} · 진행 {active} · 완료 {done} · 오류 {error}',
+    stWaiting: '대기', stUploading: '올리는 중 {p}%', stQueued: '서버 대기', stRunning: '변환 중 {p}%', stDone: '완료', stError: '오류',
+    waitingLong: '차례를 기다리고 있어요', queuedLong: '서버에서 차례를 기다리고 있어요',
+    retry: '다시 시도', remove: '빼기', downloadShort: '내려받기', missingN: '없는 파일 {n}개',
+    jobGone: '서버에서 작업을 찾을 수 없어요', networkError: '서버에 연결하지 못했어요', paused: '토큰을 다시 입력하면 이어서 진행해요',
+    done: '객체 {n}개를 CityGML {version} LoD{lod}로 변환했어요', seconds: '{s}초',
     yes: '예', no: '아니오', requestFailed: '요청에 실패했어요 ({code})', statusFailed: '상태를 읽지 못했어요',
     previewPartial: '미리보기는 삼각형 {total}개 중 {shown}개만 보여 줘요',
+    viewLook: '텍스처·재질', viewClass: '면 분류', lookNote: '텍스처·재질 색이 없는 면은 분류 색으로 보여 줘요',
     previewFailed: '미리보기를 그리지 못했어요: {msg}',
   },
   en: {
     title: '3D City Model Converter',
-    heroTitle: 'Upload a 3D model, get CityGML buildings',
+    heroTitle: 'Upload a 3D model, get CityGML objects',
     heroBody: 'Roofs, walls and ground are told apart for you, with coordinate system and textures written alongside.',
     fileTitle: 'Which files should we convert?', dropMain: 'Drop files here or click to choose',
-    dropSub: 'Upload obj or 3ds together with mtl and texture images, or as a single zip',
+    dropSub: 'Drop many models with their mtl and textures at once and they are split per model. Folders and zips work too',
     outFormat: 'Output format', version: 'CityGML version', lod: 'Level of detail', fileLayout: 'File layout',
     merged: 'Merge into one', perFile: 'One per model file',
     coords: 'Coordinates', epsg: 'Output CRS (EPSG)', srcEpsg: 'Source CRS (EPSG, if different)', srcEpsgPh: 'Leave empty to skip',
     origin: 'Origin', upAxis: 'Up axis of the model', yUp: 'Y is up', zUp: 'Z is up',
     upHint: '3ds files are read as Y-up, so leave this as is. For obj it depends on the authoring tool.',
     scale: 'Unit scale (model unit → m)', precision: 'Decimal places',
-    buildings: 'Buildings', splitBy: 'Split buildings by', splitObject: 'Object in the model',
-    splitComponent: 'Disconnected part', splitSingle: 'Whole file as one building',
+    buildings: 'Objects', splitBy: 'Split objects by', splitObject: 'Object in the model',
+    splitComponent: 'Disconnected part', splitSingle: 'Whole file as one object',
+    featureType: 'CityGML feature type', featBuilding: 'Building', featGeneric: 'Generic object',
+    featFurniture: 'City furniture', featVegetation: 'Vegetation (solitary)',
+    featureNote: 'Roof, wall and ground surfaces are only written for buildings.',
     semantics: 'Classify roof, wall and ground', wallAngle: 'Max tilt treated as wall (degrees)',
     merge: 'Merge coplanar triangles into one polygon', fixNormals: 'Orient faces outward',
-    textures: 'Include textures', materials: 'Include material colors', advanced: 'Advanced settings', run: 'Convert', help: 'Help', close: 'Close',
+    textures: 'Include textures', materials: 'Include material colors', advanced: 'Advanced settings', help: 'Help', close: 'Close',
     resultTitle: 'Result', download: 'Download result',
     gateTitle: 'Enter your access token', gateBody: 'You need a token from the administrator to use the converter.', gateLabel: 'Token',
     gateSubmit: 'Enter', gateWrong: 'That token is not valid. Check it and try again.', gateExpired: 'Your session expired. Enter the token again.',
-    stepsTitle: 'How it converts', step1: 'Split into buildings', step2: 'Tell roof, wall and ground apart', step3: 'Place on real coordinates',
-    step1Body: 'The mesh is separated into individual buildings by object name or by disconnected parts.',
+    stepsTitle: 'How it converts', step1: 'Split into objects', step2: 'Tell roof, wall and ground apart', step3: 'Place on real coordinates',
+    step1Body: 'The mesh is separated into individual objects by object name or by disconnected parts.',
     step2Body: 'Each face is classified by the direction it faces, and closed shapes are written as solids.',
     step3Body: 'Origin and scale move the model into the chosen coordinate system, with optional reprojection.',
-    thBuilding: 'Building', thTris: 'Triangles', thPolys: 'Polygons', thSurfaces: 'Surfaces', thHeight: 'Height (m)', thSolid: 'Closed solid',
+    thBuilding: 'Object', thTris: 'Triangles', thPolys: 'Polygons', thSurfaces: 'Surfaces', thHeight: 'Height (m)', thSolid: 'Closed solid',
     roof: 'Roof', wall: 'Wall', ground: 'Ground', ceiling: 'Outer ceiling', plain: 'Unclassified',
-    idle: 'Upload files and convert. The result shows up here.', uploading: 'Uploading', working: 'Converting',
-    done: 'Converted {n} building(s) to CityGML {version} LoD{lod}', seconds: '{s} s',
+    idle: 'Add files to the queue and they are converted one after another while this page stays open.',
+    uploading: 'Uploading', working: 'Converting',
+    run: 'Add to queue', runN: 'Add {n} jobs to queue', clearFiles: 'Clear selection', splitModels: 'One job per model',
+    analyzing: 'Looking through the files', planJobs: 'Split into {n} jobs', planOne: 'Converted as one job',
+    planNone: 'No obj, 3ds or zip file', filesN: '{n} file(s)', missingTex: 'Missing: {names}',
+    unusedN: '{n} unused file(s)', andMore: '{name} and {n} more',
+    queueTitle: 'Jobs', clearDone: 'Clear finished',
+    queueSummary: 'Waiting {waiting} · Active {active} · Done {done} · Failed {error}',
+    stWaiting: 'Waiting', stUploading: 'Uploading {p}%', stQueued: 'Queued', stRunning: 'Converting {p}%', stDone: 'Done', stError: 'Failed',
+    waitingLong: 'Waiting for its turn', queuedLong: 'Waiting for its turn on the server',
+    retry: 'Retry', remove: 'Remove', downloadShort: 'Download', missingN: '{n} missing file(s)',
+    jobGone: 'The job no longer exists on the server', networkError: 'Could not reach the server', paused: 'Enter the token again to continue',
+    done: 'Converted {n} object(s) to CityGML {version} LoD{lod}', seconds: '{s} s',
     yes: 'Yes', no: 'No', requestFailed: 'Request failed ({code})', statusFailed: 'Could not read job status',
     previewPartial: 'Preview shows {shown} of {total} triangles',
+    viewLook: 'Textures & colors', viewClass: 'Surface classes', lookNote: 'Faces without a texture or color use their class color',
     previewFailed: 'Could not draw the preview: {msg}',
   },
 };
@@ -434,6 +526,9 @@ function setLang(next, remember = true) {
   for (const b of document.querySelectorAll('.lang button')) b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
   renderStatus();
   if (lastResult) renderReport(lastResult);
+  showFiles();
+  renderQueue();
+  renderView();
   if (remember) { try { localStorage.setItem('lang', lang); } catch { /* 저장 없이도 동작한다 */ } }
 }
 for (const b of document.querySelectorAll('.lang button')) b.addEventListener('click', () => setLang(b.dataset.lang));
@@ -466,7 +561,7 @@ $('gateForm').addEventListener('submit', async (e) => {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: $('gateToken').value }),
     });
-    if (res.ok) { $('gateToken').value = ''; gate.close(); }
+    if (res.ok) { $('gateToken').value = ''; gate.close(); resumeQueue(); }
     else $('gateError').textContent = t('gateWrong');
   } catch (err) {
     $('gateError').textContent = err.message;
@@ -495,24 +590,230 @@ help.addEventListener('click', (e) => { if (e.target === help) help.close(); });
 
 const drop = $('drop'), picker = $('picker'), runBtn = $('run');
 let selected = [];
+// 자동 분류 결과. groups: 모델(obj·3ds) 또는 zip 하나마다 작업 하나, unused: 어느 작업에도 쓰이지 않은 파일
+let plan = { groups: [], unused: [] };
+let analyzing = false, planGen = 0;
+
+// ---- 자동 분류: 모델 파일이 참조하는 mtl·텍스처를 읽어 작업 단위로 묶는다 ----
+const MODEL_RE = /\.(obj|3ds)$/i, ZIP_RE = /\.zip$/i;
+const baseName = (p) => p.replace(/\\/g, '/').split('/').pop();
+const dirOf = (p) => { const i = p.lastIndexOf('/'); return i < 0 ? '' : p.slice(0, i + 1); };
+const stemOf = (p) => baseName(p).replace(/\.[^.]*$/, '');
+
+function joinPath(dir, ref) {
+  const out = [];
+  for (const part of (dir + ref.replace(/\\/g, '/')).split('/')) {
+    if (part === '..') out.pop(); else if (part && part !== '.') out.push(part);
+  }
+  return out.join('/');
+}
+
+// 모델에 적힌 경로로 올린 파일을 찾는다. 같은 상대 경로가 없으면 파일명이 같고 폴더가 가장 가까운 파일을 고른다.
+// 서버도 같은 방식(상대 경로 → 대소문자 무시 파일명)으로 텍스처를 찾는다.
+function makeResolver(items) {
+  const byName = new Map(), byPath = new Map();
+  for (const it of items) {
+    const k = baseName(it.path).toLowerCase();
+    if (!byName.has(k)) byName.set(k, []);
+    byName.get(k).push(it);
+    byPath.set(it.path.toLowerCase(), it);
+  }
+  return (ref, from) => {
+    ref = ref.trim().replace(/^["']|["']$/g, '');
+    if (!ref) return null;
+    const exact = byPath.get(joinPath(dirOf(from), ref).toLowerCase());
+    if (exact) return exact;
+    const cands = byName.get(baseName(ref).toLowerCase());
+    if (!cands) return null;
+    const fromDir = dirOf(from);
+    let best = null, bestScore = -1;
+    for (const c of cands) {
+      const d = dirOf(c.path);
+      let n = 0;
+      while (n < d.length && n < fromDir.length && d[n] === fromDir[n]) n++;
+      if (n > bestScore) { best = c; bestScore = n; }
+    }
+    return best;
+  };
+}
+
+// map_Kd -s 1 1 1 wall.png 처럼 옵션이 앞에 붙을 수 있어 앞 단어를 하나씩 떼며 찾는다
+function resolveRef(resolve, raw, from) {
+  const tokens = raw.trim().split(/\s+/);
+  for (let i = 0; i < tokens.length; i++) {
+    const hit = resolve(tokens.slice(i).join(' '), from);
+    if (hit) return { hit };
+  }
+  return { missing: baseName(tokens[tokens.length - 1]) };
+}
+
+const parseCache = new WeakMap();
+function cached(file, fn) {
+  if (!parseCache.has(file)) parseCache.set(file, fn(file).catch(() => []));
+  return parseCache.get(file);
+}
+
+// obj는 크기가 클 수 있어 mtllib가 보통 놓이는 앞 256KB와 끝 64KB만 읽는다
+const objMtlRefs = (file) => cached(file, async (f) => {
+  const HEAD = 256 * 1024;
+  let text = await f.slice(0, HEAD).text();
+  if (f.size > HEAD) text += '\n' + await f.slice(Math.max(HEAD, f.size - 64 * 1024)).text();
+  return [...text.matchAll(/^[ \t]*mtllib[ \t]+(.+?)[ \t]*\r?$/gm)].map((m) => m[1]);
+});
+const mtlTextureRefs = (file) => cached(file, async (f) =>
+  [...(await f.text()).matchAll(/^[ \t]*map_Kd[ \t]+(.+?)[ \t]*\r?$/gim)].map((m) => m[1]));
+
+// 3ds 청크 트리에서 확산(diffuse) 텍스처 맵(0xA200) 안의 파일 이름(0xA300)만 모은다
+const tdsTextureRefs = (file) => cached(file, async (f) => {
+  const buf = await f.arrayBuffer();
+  const v = new DataView(buf);
+  const out = [];
+  const CONTAINERS = new Set([0x4D4D, 0x3D3D, 0xAFFF, 0xA200]);
+  const walk = (start, end, inMap) => {
+    let p = start;
+    while (p + 6 <= end) {
+      const id = v.getUint16(p, true), len = v.getUint32(p + 2, true);
+      if (len < 6 || p + len > end) break;
+      if (id === 0xA300 && inMap) {
+        let s = '';
+        for (let i = p + 6; i < p + len && v.getUint8(i); i++) s += String.fromCharCode(v.getUint8(i));
+        out.push(s);
+      } else if (CONTAINERS.has(id)) {
+        walk(p + 6, p + len, inMap || id === 0xA200);
+      }
+      p += len;
+    }
+  };
+  walk(0, buf.byteLength, false);
+  return out;
+});
+
+async function analyze(items) {
+  const resolve = makeResolver(items);
+  const groups = [], used = new Set();
+  for (const it of items) {
+    if (ZIP_RE.test(it.path)) {
+      groups.push({ name: it.path, files: [it], missing: [] });
+      used.add(it);
+      continue;
+    }
+    if (!MODEL_RE.test(it.path)) continue;
+    const files = [it], missing = new Set();
+    const add = (f) => { if (!files.includes(f)) files.push(f); };
+    const addTextures = (refs, from) => {
+      for (const raw of refs) {
+        const r = resolveRef(resolve, raw, from);
+        if (r.hit) add(r.hit); else missing.add(r.missing);
+      }
+    };
+    if (/\.obj$/i.test(it.path)) {
+      const libs = await objMtlRefs(it.file);
+      const mtls = [];
+      for (const raw of libs) {
+        const whole = resolve(raw, it.path);
+        if (whole) { mtls.push(whole); continue; }
+        for (const tok of raw.split(/\s+/)) {
+          const hit = resolve(tok, it.path);
+          if (hit) mtls.push(hit); else missing.add(baseName(tok));
+        }
+      }
+      if (!libs.length) {  // mtllib가 없으면 같은 폴더의 같은 이름 mtl
+        const same = resolve(`${stemOf(it.path)}.mtl`, it.path);
+        if (same && dirOf(same.path) === dirOf(it.path)) mtls.push(same);
+      }
+      for (const m of mtls) {
+        add(m);
+        addTextures(await mtlTextureRefs(m.file), m.path);
+      }
+    } else {
+      addTextures(await tdsTextureRefs(it.file), it.path);
+    }
+    for (const f of files) used.add(f);
+    groups.push({ name: it.path, files, missing: [...missing] });
+  }
+  return { groups, unused: items.filter((it) => !used.has(it)) };
+}
+
+const splitOn = () => $('splitModels').checked && plan.groups.length > 1;
+
+// 대기열에 넣을 작업 목록. 나누지 않으면 고른 파일 전체가 작업 하나다.
+function batches() {
+  if (splitOn()) return plan.groups.map((g) => ({ name: g.name, files: g.files, missing: g.missing }));
+  const first = plan.groups[0]?.name ?? selected[0].path;
+  const name = plan.groups.length > 1 ? t('andMore', { name: first, n: plan.groups.length - 1 }) : first;
+  return [{ name, files: selected.slice(), missing: plan.groups.flatMap((g) => g.missing) }];
+}
+
+function fileRow(name, right, extra = null, cls = '') {
+  const li = document.createElement('li');
+  if (cls) li.className = cls;
+  const left = Object.assign(document.createElement('span'), { className: 'f-name', textContent: name });
+  if (extra) left.append(Object.assign(document.createElement('small'), { className: 'miss', textContent: extra }));
+  li.append(left, Object.assign(document.createElement('span'), { textContent: right }));
+  return li;
+}
 
 function showFiles() {
-  $('files').replaceChildren(...selected.map((f) => {
-    const li = document.createElement('li');
-    const name = Object.assign(document.createElement('span'), { textContent: f.path });
-    const size = Object.assign(document.createElement('span'), { textContent: `${(f.file.size / 1024).toFixed(1)} KB` });
-    li.append(name, size);
-    return li;
-  }));
-  runBtn.disabled = selected.length === 0;
+  const has = selected.length > 0;
+  $('filesHead').hidden = !has;
+  $('splitRow').hidden = analyzing || plan.groups.length < 2;
+  const split = splitOn();
+  runBtn.textContent = split ? t('runN', { n: plan.groups.length }) : t('run');
+  runBtn.disabled = !has || analyzing || plan.groups.length === 0;
+  if (!has) { $('files').replaceChildren(); return; }
+  if (analyzing) { $('planNote').textContent = t('analyzing'); return; }
+  $('planNote').textContent = plan.groups.length === 0 ? t('planNone')
+    : split ? t('planJobs', { n: plan.groups.length }) : t('planOne');
+  const missText = (m) => (m.length ? t('missingTex', { names: m.join(', ') }) : null);
+  if (split) {
+    const rows = plan.groups.map((g) => fileRow(g.name, t('filesN', { n: g.files.length }), missText(g.missing)));
+    if (plan.unused.length) {
+      const li = fileRow(t('unusedN', { n: plan.unused.length }), '', null, 'unused');
+      li.title = plan.unused.map((u) => u.path).join('\n');
+      rows.push(li);
+    }
+    $('files').replaceChildren(...rows);
+  } else {
+    $('files').replaceChildren(...selected.map((f) => fileRow(f.path, `${(f.file.size / 1024).toFixed(1)} KB`)));
+  }
+}
+
+async function replan() {
+  const gen = ++planGen;
+  analyzing = true;
+  showFiles();
+  const result = await analyze(selected);
+  if (gen !== planGen) return;  // 그사이 파일이 바뀌었으면 버린다
+  plan = result;
+  analyzing = false;
+  showFiles();
 }
 
 function addFiles(items) {
   for (const it of items) {
     if (!selected.some((s) => s.path === it.path)) selected.push(it);
   }
+  replan();
+}
+
+function clearSelection() {
+  selected = [];
+  plan = { groups: [], unused: [] };
+  planGen++;
+  analyzing = false;
   showFiles();
 }
+$('clearFiles').addEventListener('click', clearSelection);
+
+function syncFeature() {
+  const building = $('feature').value === 'building';
+  $('semantics').disabled = !building;
+  $('semantics').closest('.toggle').classList.toggle('off', !building);
+  $('featureNote').hidden = building;
+}
+$('feature').addEventListener('change', syncFeature);
+syncFeature();
+$('splitModels').addEventListener('change', showFiles);
 
 async function readEntry(entry, prefix = '') {
   if (entry.isFile) {
@@ -555,7 +856,7 @@ function options() {
   const num = (id) => Number($(id).value);
   const src = $('src_epsg').value.trim();
   return {
-    version: radio('version'), lod: Number(radio('lod')), output: radio('output'), up_axis: radio('up_axis'),
+    version: radio('version'), feature: $('feature').value, lod: Number(radio('lod')), output: radio('output'), up_axis: radio('up_axis'),
     epsg: num('epsg'), src_epsg: src ? Number(src) : null,
     offset_x: num('offset_x'), offset_y: num('offset_y'), offset_z: num('offset_z'),
     scale: num('scale'), precision: num('precision'), split: $('split').value,
@@ -565,41 +866,248 @@ function options() {
   };
 }
 
-runBtn.addEventListener('click', async () => {
-  runBtn.disabled = true;
-  lastResult = null;
-  $('result').hidden = true;
-  $('bar').hidden = false;
-  $('bar').value = 0;
-  setStatus('uploading');
-  const body = new FormData();
-  for (const s of selected) body.append('files', s.file, s.path);
-  body.append('options', JSON.stringify(options()));
-  try {
-    const res = await api('api/jobs', { method: 'POST', body });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || t('requestFailed', { code: res.status }));
-    await poll(data.id);
-  } catch (err) {
-    setStatus('', {}, true, err.message);
-    $('bar').hidden = true;
-  } finally {
-    runBtn.disabled = selected.length === 0;
+// ---- 대기열: 브라우저가 작업을 차례로 올리고 상태를 확인한다 ----
+// 업로드는 한 번에 하나씩, 서버에서 변환 중인 작업은 SERVER_SLOTS개까지 둔다.
+// 서버에 올린 작업은 localStorage에 남겨 새로고침 뒤에도 결과를 다시 볼 수 있다.
+// 아직 올리지 않은 작업은 파일을 브라우저 메모리에만 들고 있어 창을 닫으면 사라진다.
+const SERVER_SLOTS = 2;
+const STORE_KEY = 'converter.jobs';
+const queue = [];
+let seq = Date.now();
+let uploadingNow = false, paused = false, polling = false;
+let viewingId = null, userPicked = false, shownJobId = null;
+
+const isActive = (q) => q.state === 'queued' || q.state === 'running';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function saveQueue() {
+  const keep = queue.filter((q) => q.jobId).map(({ id, name, jobId, nFiles, missing, version, lod, feature }) =>
+    ({ id, name, jobId, nFiles, missing, version, lod, feature }));
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(keep)); } catch { /* 저장 없이도 동작한다 */ }
+}
+
+function restoreQueue() {
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch { /* 무시 */ }
+  for (const s of saved) queue.push({ ...s, state: 'queued', progress: 0, files: null, restored: true });
+  renderQueue();
+  ensurePolling();
+}
+
+runBtn.addEventListener('click', () => {
+  const opts = options();
+  for (const b of batches()) {
+    queue.push({
+      id: String(seq++), name: b.name, files: b.files, nFiles: b.files.length, missing: b.missing,
+      options: opts, version: opts.version, lod: opts.lod, feature: opts.feature, state: 'waiting', progress: 0,
+    });
   }
+  clearSelection();
+  if (!viewingId) viewingId = queue.find((q) => q.state === 'waiting')?.id ?? null;
+  renderQueue();
+  renderView();
+  pump();
 });
 
-async function poll(id) {
-  for (;;) {
-    const res = await api(`api/jobs/${id}`);
-    const st = await res.json();
-    if (!res.ok) throw new Error(st.detail || t('statusFailed'));
-    $('bar').value = st.progress || 0;
-    if (st.state === 'error') throw new Error(st.message);
-    if (st.state === 'done') { await showResult(id, st.report); return; }
-    if (st.message) setStatus('', {}, false, st.message); else setStatus('working');
-    await new Promise((r) => setTimeout(r, 700));
+function upload(item) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'api/jobs');
+    xhr.responseType = 'json';
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) { item.progress = e.loaded / e.total; renderQueue(); renderView(); }
+    };
+    xhr.onload = () => {
+      if (xhr.status === 401) reject(Object.assign(new Error(t('gateExpired')), { auth: true }));
+      else if (xhr.status >= 200 && xhr.status < 300 && xhr.response?.id) resolve(xhr.response.id);
+      else reject(new Error(xhr.response?.detail || t('requestFailed', { code: xhr.status })));
+    };
+    xhr.onerror = () => reject(new Error(t('networkError')));
+    const body = new FormData();
+    for (const f of item.files) body.append('files', f.file, f.path);
+    body.append('options', JSON.stringify(item.options));
+    xhr.send(body);
+  });
+}
+
+function pump() {
+  if (paused || uploadingNow) return;
+  if (queue.filter(isActive).length >= SERVER_SLOTS) return;
+  const next = queue.find((q) => q.state === 'waiting');
+  if (next) startUpload(next);
+}
+
+async function startUpload(item) {
+  uploadingNow = true;
+  Object.assign(item, { state: 'uploading', progress: 0, message: null });
+  renderQueue(); renderView();
+  try {
+    item.jobId = await upload(item);
+    Object.assign(item, { state: 'queued', progress: 0 });
+    saveQueue();
+  } catch (err) {
+    if (err.auth) { item.state = 'waiting'; pause(); }
+    else Object.assign(item, { state: 'error', message: err.message });
+  } finally {
+    uploadingNow = false;
+    renderQueue(); renderView();
+    ensurePolling();
+    pump();
   }
 }
+
+function pause() {
+  paused = true;
+  showGate('gateExpired');
+  renderView();
+}
+
+async function refresh(item) {
+  let res;
+  try { res = await fetch(`api/jobs/${item.jobId}`, { cache: 'no-store' }); } catch { return; }  // 잠깐 끊기면 다음 차례에 다시
+  if (res.status === 401) { pause(); return; }
+  if (res.status === 404) {
+    if (item.restored) { queue.splice(queue.indexOf(item), 1); saveQueue(); return; }  // 보관 기간이 지나 지워진 작업
+    Object.assign(item, { state: 'error', message: t('jobGone') });
+    return;
+  }
+  const st = await res.json();
+  item.progress = st.progress || 0;
+  item.message = st.message;
+  if (st.state === 'done') {
+    Object.assign(item, { state: 'done', report: st.report });
+    if (!item.restored && (!userPicked || viewingId === item.id)) viewingId = item.id;
+  } else if (st.state === 'error') {
+    item.state = 'error';
+  } else {
+    item.state = st.state === 'running' ? 'running' : 'queued';
+  }
+}
+
+async function ensurePolling() {
+  if (polling) return;
+  polling = true;
+  try {
+    while (queue.some(isActive)) {
+      if (!paused) {
+        for (const item of queue.filter(isActive)) await refresh(item);
+        renderQueue(); renderView();
+        pump();
+      }
+      await sleep(1000);
+    }
+  } finally {
+    polling = false;
+  }
+}
+
+function resumeQueue() {
+  if (!paused) return;
+  paused = false;
+  renderView();
+  ensurePolling();
+  pump();
+}
+
+function stateText(q) {
+  const p = Math.round((q.progress || 0) * 100);
+  return {
+    waiting: t('stWaiting'), uploading: t('stUploading', { p }), queued: t('stQueued'),
+    running: t('stRunning', { p }), done: t('stDone'), error: t('stError'),
+  }[q.state];
+}
+
+function actionButton(label, onClick) {
+  const b = Object.assign(document.createElement('button'), { type: 'button', className: 'q-act', textContent: label });
+  b.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+  return b;
+}
+
+function removeItem(q) {
+  queue.splice(queue.indexOf(q), 1);
+  if (viewingId === q.id) { viewingId = null; userPicked = false; }
+  saveQueue(); renderQueue(); renderView();
+}
+
+function renderQueue() {
+  const count = (s) => queue.filter((q) => q.state === s).length;
+  const active = queue.filter((q) => q.state === 'uploading' || isActive(q)).length;
+  $('queueSummary').textContent = queue.length
+    ? t('queueSummary', { waiting: count('waiting'), active, done: count('done'), error: count('error') })
+    : '';
+  $('clearDone').hidden = count('done') === 0;
+  const rows = queue.map((q) => {
+    const li = document.createElement('li');
+    li.className = 'q-item';
+    li.dataset.state = q.state;
+    li.setAttribute('aria-current', String(q.id === viewingId));
+    const main = Object.assign(document.createElement('button'), { type: 'button', className: 'q-main' });
+    main.addEventListener('click', () => { viewingId = q.id; userPicked = true; renderQueue(); renderView(); });
+    const kind = { building: 'Building', generic: 'Generic', furniture: 'CityFurniture', vegetation: 'Vegetation' }[q.feature ?? 'building'];
+    const meta = [`CityGML ${q.version} · LoD${q.lod} · ${kind}`, t('filesN', { n: q.nFiles })];
+    if (q.missing?.length) meta.push(t('missingN', { n: q.missing.length }));
+    main.append(
+      Object.assign(document.createElement('span'), { className: 'q-name', textContent: q.name }),
+      Object.assign(document.createElement('span'), {
+        className: 'q-meta', textContent: q.state === 'error' && q.message ? q.message : meta.join(' · '),
+      }),
+    );
+    li.append(main, Object.assign(document.createElement('span'), { className: 'q-state', textContent: stateText(q) }));
+    if (q.state === 'done') {
+      li.append(Object.assign(document.createElement('a'), {
+        className: 'q-act', href: `api/jobs/${q.jobId}/download`, textContent: t('downloadShort'),
+      }));
+    }
+    if (q.state === 'error' && q.files) {
+      li.append(actionButton(t('retry'), () => {
+        Object.assign(q, { state: 'waiting', jobId: null, progress: 0, message: null });
+        saveQueue(); renderQueue(); renderView(); pump();
+      }));
+    }
+    if (q.state === 'waiting' || q.state === 'done' || q.state === 'error') li.append(actionButton(t('remove'), () => removeItem(q)));
+    if (q.state === 'uploading' || isActive(q)) {
+      const bar = Object.assign(document.createElement('span'), { className: 'q-bar' });
+      const fill = document.createElement('i');
+      fill.style.transform = `scaleX(${q.progress || 0})`;
+      bar.append(fill);
+      li.append(bar);
+    }
+    return li;
+  });
+  $('queue').replaceChildren(...rows);
+}
+
+$('clearDone').addEventListener('click', () => {
+  for (const q of queue.filter((x) => x.state === 'done')) queue.splice(queue.indexOf(q), 1);
+  if (!queue.some((q) => q.id === viewingId)) { viewingId = null; userPicked = false; }
+  saveQueue(); renderQueue(); renderView();
+});
+
+// 결과 칸은 목록에서 고른 작업 하나를 보여 준다
+function renderView() {
+  const item = queue.find((q) => q.id === viewingId);
+  if (item?.state === 'done') {
+    if (shownJobId !== item.jobId) { shownJobId = item.jobId; showResult(item.jobId, item.report); }
+    return;
+  }
+  shownJobId = null;
+  lastResult = null;
+  $('result').hidden = true;
+  const moving = item && (item.state === 'uploading' || isActive(item));
+  $('bar').hidden = !moving;
+  if (moving) $('bar').value = item.progress || 0;
+  if (!item) setStatus('idle');
+  else if (paused && item.state !== 'error') setStatus('paused');
+  else if (item.state === 'error') setStatus('', {}, true, item.message);
+  else if (item.state === 'waiting') setStatus('waitingLong');
+  else if (item.state === 'uploading') setStatus('uploading');
+  else if (item.state === 'queued') setStatus('queuedLong');
+  else setStatus('', {}, false, item.message || t('working'));
+}
+
+window.addEventListener('beforeunload', (e) => {
+  if (queue.some((q) => q.state === 'waiting' || q.state === 'uploading')) e.preventDefault();
+});
 
 function renderReport({ id, report }) {
   const o = report.options;
@@ -620,14 +1128,18 @@ function renderReport({ id, report }) {
   }));
 }
 
+let previewTicket = 0;
 async function showResult(id, report) {
   $('bar').hidden = true;
   $('result').hidden = false;
   lastResult = { id, report };
   renderReport(lastResult);
+  // 목록에서 작업을 빠르게 바꿔 고르면 응답 순서가 뒤바뀔 수 있어 마지막 요청만 그린다
+  const ticket = ++previewTicket;
   try {
     const res = await api(`api/jobs/${id}/preview`);
-    if (res.ok) drawPreview(await res.json());
+    const data = res.ok ? await res.json() : null;
+    if (data && ticket === previewTicket) drawPreview(data, id);
   } catch (err) {
     $('previewNote').textContent = t('previewFailed', { msg: err.message });
   }
@@ -635,7 +1147,40 @@ async function showResult(id, report) {
 
 // ---- 미리보기 ----
 let renderer, scene, camera, controls, meshObj;
+// 겉모습 보기: 삼각형 묶음마다 텍스처·재질 색 재질, 분류 보기: 모든 묶음에 분류 색 재질 하나
+let lookMaterials = [], classMaterial = null;
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const viewMode = () => document.querySelector('input[name=viewmode]:checked').value;
+
+function applyViewMode() {
+  $('legend').dataset.mode = viewMode();
+  if (meshObj) meshObj.material = viewMode() === 'look' ? lookMaterials : lookMaterials.map(() => classMaterial);
+}
+for (const r of document.querySelectorAll('input[name=viewmode]')) r.addEventListener('change', applyViewMode);
+
+function disposePreview() {
+  if (!meshObj) return;
+  scene.remove(meshObj);
+  meshObj.geometry.dispose();
+  for (const m of new Set([...lookMaterials, classMaterial])) { m?.map?.dispose(); m?.dispose(); }
+  meshObj = null;
+  lookMaterials = [];
+  classMaterial = null;
+}
+
+function lookMaterial(look, jobId) {
+  const side = THREE.DoubleSide;
+  if (look.texture) {
+    const url = `api/jobs/${jobId}/texture/${look.texture.split('/').map(encodeURIComponent).join('/')}`;
+    const map = new THREE.TextureLoader().load(url);
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.wrapS = map.wrapT = THREE.RepeatWrapping;
+    map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return new THREE.MeshLambertMaterial({ map, side });
+  }
+  const [r, g, b] = look.color;
+  return new THREE.MeshLambertMaterial({ color: new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace), side });
+}
 
 function decode(b64, Type) {
   const bin = atob(b64);
@@ -644,7 +1189,7 @@ function decode(b64, Type) {
   return new Type(bytes.buffer);
 }
 
-function drawPreview(data) {
+function drawPreview(data, jobId) {
   const box = $('viewer');
   if (!renderer) {
     renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -668,21 +1213,42 @@ function drawPreview(data) {
     renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
   }
   scene.background = new THREE.Color(css('--field'));
-  if (meshObj) { scene.remove(meshObj); meshObj.geometry.dispose(); meshObj.material.dispose(); }
+  disposePreview();
 
-  const positions = decode(data.positions, Float32Array);
+  const srcPos = decode(data.positions, Float32Array);
   const classes = decode(data.classes, Uint8Array);
-  const palette = ['--roof', '--wall', '--ground', '--ceiling', '--plain'].map((n) => new THREE.Color(css(n)));
-  const colors = new Float32Array(positions.length);
-  for (let i = 0; i < classes.length; i++) {
-    const c = palette[classes[i]] ?? palette[4];
-    for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], i * 9 + k * 3);
-  }
+  const n = classes.length;
+  const srcUv = data.uvs ? decode(data.uvs, Float32Array) : new Float32Array(n * 6);
+  const look = data.look ? decode(data.look, Int32Array) : new Int32Array(n).fill(-1);
+  const looks = data.looks || [];
+
+  // 같은 겉모습끼리 모아 그리기 묶음(group)을 만든다. 묶음 0은 겉모습 없는 면(분류 색).
+  const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => look[a] - look[b]);
+  const palette = ['--roof', '--wall', '--ground', '--ceiling', '--plain'].map((name) => new THREE.Color(css(name)));
+  const positions = new Float32Array(n * 9);
+  const colors = new Float32Array(n * 9);
+  const uvs = new Float32Array(n * 6);
   const geom = new THREE.BufferGeometry();
+  let start = 0;
+  for (let j = 0; j < n; j++) {
+    const i = order[j];
+    positions.set(srcPos.subarray(i * 9, i * 9 + 9), j * 9);
+    uvs.set(srcUv.subarray(i * 6, i * 6 + 6), j * 6);
+    const c = palette[classes[i]] ?? palette[4];
+    for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], j * 9 + k * 3);
+    if (j === n - 1 || look[order[j + 1]] !== look[i]) {
+      geom.addGroup(start * 3, (j + 1 - start) * 3, look[i] + 1);
+      start = j + 1;
+    }
+  }
   geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   geom.computeVertexNormals();
-  meshObj = new THREE.Mesh(geom, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+  classMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  lookMaterials = [classMaterial, ...looks.map((l) => lookMaterial(l, jobId))];
+  meshObj = new THREE.Mesh(geom, lookMaterials);
+  applyViewMode();
   scene.add(meshObj);
 
   const radius = Math.max(Math.hypot(...data.size) / 2, 1);
@@ -700,6 +1266,7 @@ let initial = (navigator.language || 'ko').toLowerCase().startsWith('ko') ? 'ko'
 try { initial = new URLSearchParams(location.search).get('lang') || localStorage.getItem('lang') || initial; } catch { /* 기본값 사용 */ }
 setLang(initial, false);
 checkSession();
+restoreQueue();
 </script>
 </body>
 </html>
