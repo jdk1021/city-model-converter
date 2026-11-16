@@ -205,21 +205,64 @@ def _convert_group(job_dir, out_dir, out_name, models, opts: Options, progress, 
             return tex, color
 
         writer.add_building(b, appearance)
-        preview.append((b.tris, b.tri_cls))
+        preview.add(b, materials, opts, textures)
     writer.close()
     report["warnings"] += textures.warnings
     return gml_path
 
 
-def _write_preview(job_dir: Path, preview) -> None:
-    if not preview:
+class _Preview:
+    """미리보기용 삼각형과 겉모습(텍스처·재질 색)을 모은다.
+
+    looks는 겉모습 목록이고 삼각형마다 그 색인(look)을 둔다. -1은 겉모습이 없어 분류 색으로 그린다.
+    텍스처 경로는 출력 폴더 기준 상대 경로로, CityGML에 적힌 imageURI와 같다.
+    """
+
+    def __init__(self):
+        self.parts: list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]] = []
+        self.looks: list[dict] = []
+        self._keys: dict[tuple, int] = {}
+
+    def _look(self, key: tuple, value: dict) -> int:
+        if key not in self._keys:
+            self._keys[key] = len(self.looks)
+            self.looks.append(value)
+        return self._keys[key]
+
+    def add(self, b: geometry.Building, materials, opts: Options, textures: _Textures) -> None:
+        n = len(b.tris)
+        uv = b.tri_uv if b.tri_uv is not None else np.full((n, 3, 2), np.nan)
+        has_uv = ~np.isnan(uv).any(axis=(1, 2))
+        look = np.full(n, -1, dtype=np.int32)
+        mats = b.tri_mat if b.tri_mat is not None else np.full(n, -1)
+        for mi in np.unique(mats):
+            m = materials[mi] if 0 <= mi < len(materials) else None
+            if m is None:
+                continue
+            sel = mats == mi
+            color = m.color if (opts.materials and m.color is not None) else None
+            if opts.textures and m.texture is not None and (sel & has_uv).any():
+                uri = textures.uri(m.texture)
+                if uri is not None:
+                    look[sel & has_uv] = self._look(("tex", uri), {"texture": uri})
+                    sel = sel & ~has_uv
+            if color is not None and sel.any():
+                c = [round(float(v), 4) for v in color]
+                look[sel] = self._look(("color", *c), {"color": c})
+        self.parts.append((b.tris, b.tri_cls, np.nan_to_num(uv), look))
+
+
+def _write_preview(job_dir: Path, preview: _Preview) -> None:
+    if not preview.parts:
         return
-    tris = np.concatenate([p[0] for p in preview])
-    cls = np.concatenate([p[1] for p in preview])
+    tris = np.concatenate([p[0] for p in preview.parts])
+    cls = np.concatenate([p[1] for p in preview.parts])
+    uvs = np.concatenate([p[2] for p in preview.parts])
+    look = np.concatenate([p[3] for p in preview.parts])
     total = len(tris)
     if total > PREVIEW_MAX_TRIANGLES:
         pick = np.random.default_rng(0).choice(total, PREVIEW_MAX_TRIANGLES, replace=False)
-        tris, cls = tris[pick], cls[pick]
+        tris, cls, uvs, look = tris[pick], cls[pick], uvs[pick], look[pick]
     lo, hi = tris.reshape(-1, 3).min(axis=0), tris.reshape(-1, 3).max(axis=0)
     center = (lo + hi) / 2
     data = {
@@ -229,6 +272,9 @@ def _write_preview(job_dir: Path, preview) -> None:
         "size": (hi - lo).tolist(),
         "positions": base64.b64encode((tris - center).astype("<f4").tobytes()).decode(),
         "classes": base64.b64encode(cls.astype(np.uint8).tobytes()).decode(),
+        "uvs": base64.b64encode(uvs.astype("<f4").tobytes()).decode(),
+        "look": base64.b64encode(look.astype("<i4").tobytes()).decode(),
+        "looks": preview.looks,
     }
     (job_dir / "preview.json").write_text(json.dumps(data))
 
@@ -259,7 +305,7 @@ def run(job_dir_str: str, options: dict) -> None:
                 groups.append((name, [m]))
 
         report = {"options": asdict(opts), "files": [], "buildings": [], "warnings": []}
-        preview: list = []
+        preview = _Preview()
         for i, (name, group) in enumerate(groups):
             def progress(message, i=i):
                 write_status(job_dir, state="running", progress=i / len(groups), message=message)

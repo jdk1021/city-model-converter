@@ -123,6 +123,10 @@
   #viewer canvas { display: block; width: 100%; height: 100%; }
   #legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 13px; color: var(--sub); }
   #legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+  #legend[data-mode="look"] .cls, #legend[data-mode="class"] .look { display: none; }
+  .viewmode { margin-top: 20px; max-width: 280px; }
+  .viewmode span { padding: 7px 6px; font-size: 14px; }
+  .viewmode + #viewer { margin-top: 10px; }
 
   .tools { display: flex; align-items: center; gap: 8px; }
   .text-btn { padding: 8px 12px; border: 0; border-radius: 10px; background: transparent; color: var(--sub);
@@ -333,13 +337,18 @@
           <tbody id="rows"></tbody>
         </table>
       </div>
+      <div class="seg viewmode" role="radiogroup">
+        <label><input type="radio" name="viewmode" value="look" checked><span data-i18n="viewLook">텍스처·재질</span></label>
+        <label><input type="radio" name="viewmode" value="class"><span data-i18n="viewClass">면 분류</span></label>
+      </div>
       <div id="viewer"></div>
       <div id="legend">
-        <span><i style="background:var(--roof)"></i><span data-i18n="roof">지붕</span></span>
-        <span><i style="background:var(--wall)"></i><span data-i18n="wall">벽</span></span>
-        <span><i style="background:var(--ground)"></i><span data-i18n="ground">바닥</span></span>
-        <span><i style="background:var(--ceiling)"></i><span data-i18n="ceiling">외부 천장</span></span>
-        <span><i style="background:var(--plain)"></i><span data-i18n="plain">분류 안 함</span></span>
+        <span class="cls"><i style="background:var(--roof)"></i><span data-i18n="roof">지붕</span></span>
+        <span class="cls"><i style="background:var(--wall)"></i><span data-i18n="wall">벽</span></span>
+        <span class="cls"><i style="background:var(--ground)"></i><span data-i18n="ground">바닥</span></span>
+        <span class="cls"><i style="background:var(--ceiling)"></i><span data-i18n="ceiling">외부 천장</span></span>
+        <span class="cls"><i style="background:var(--plain)"></i><span data-i18n="plain">분류 안 함</span></span>
+        <span class="look" data-i18n="lookNote">텍스처·재질 색이 없는 면은 분류 색으로 보여 줘요</span>
         <span id="previewNote"></span>
       </div>
     </div>
@@ -382,6 +391,7 @@ const T = {
     done: '건물 {n}동을 CityGML {version} LoD{lod}로 변환했어요', seconds: '{s}초',
     yes: '예', no: '아니오', requestFailed: '요청에 실패했어요 ({code})', statusFailed: '상태를 읽지 못했어요',
     previewPartial: '미리보기는 삼각형 {total}개 중 {shown}개만 보여 줘요',
+    viewLook: '텍스처·재질', viewClass: '면 분류', lookNote: '텍스처·재질 색이 없는 면은 분류 색으로 보여 줘요',
     previewFailed: '미리보기를 그리지 못했어요: {msg}',
   },
   en: {
@@ -414,6 +424,7 @@ const T = {
     done: 'Converted {n} building(s) to CityGML {version} LoD{lod}', seconds: '{s} s',
     yes: 'Yes', no: 'No', requestFailed: 'Request failed ({code})', statusFailed: 'Could not read job status',
     previewPartial: 'Preview shows {shown} of {total} triangles',
+    viewLook: 'Textures & colors', viewClass: 'Surface classes', lookNote: 'Faces without a texture or color use their class color',
     previewFailed: 'Could not draw the preview: {msg}',
   },
 };
@@ -627,7 +638,7 @@ async function showResult(id, report) {
   renderReport(lastResult);
   try {
     const res = await api(`api/jobs/${id}/preview`);
-    if (res.ok) drawPreview(await res.json());
+    if (res.ok) drawPreview(await res.json(), id);
   } catch (err) {
     $('previewNote').textContent = t('previewFailed', { msg: err.message });
   }
@@ -635,7 +646,40 @@ async function showResult(id, report) {
 
 // ---- 미리보기 ----
 let renderer, scene, camera, controls, meshObj;
+// 겉모습 보기: 삼각형 묶음마다 텍스처·재질 색 재질, 분류 보기: 모든 묶음에 분류 색 재질 하나
+let lookMaterials = [], classMaterial = null;
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const viewMode = () => document.querySelector('input[name=viewmode]:checked').value;
+
+function applyViewMode() {
+  $('legend').dataset.mode = viewMode();
+  if (meshObj) meshObj.material = viewMode() === 'look' ? lookMaterials : lookMaterials.map(() => classMaterial);
+}
+for (const r of document.querySelectorAll('input[name=viewmode]')) r.addEventListener('change', applyViewMode);
+
+function disposePreview() {
+  if (!meshObj) return;
+  scene.remove(meshObj);
+  meshObj.geometry.dispose();
+  for (const m of new Set([...lookMaterials, classMaterial])) { m?.map?.dispose(); m?.dispose(); }
+  meshObj = null;
+  lookMaterials = [];
+  classMaterial = null;
+}
+
+function lookMaterial(look, jobId) {
+  const side = THREE.DoubleSide;
+  if (look.texture) {
+    const url = `api/jobs/${jobId}/texture/${look.texture.split('/').map(encodeURIComponent).join('/')}`;
+    const map = new THREE.TextureLoader().load(url);
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.wrapS = map.wrapT = THREE.RepeatWrapping;
+    map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return new THREE.MeshLambertMaterial({ map, side });
+  }
+  const [r, g, b] = look.color;
+  return new THREE.MeshLambertMaterial({ color: new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace), side });
+}
 
 function decode(b64, Type) {
   const bin = atob(b64);
@@ -644,7 +688,7 @@ function decode(b64, Type) {
   return new Type(bytes.buffer);
 }
 
-function drawPreview(data) {
+function drawPreview(data, jobId) {
   const box = $('viewer');
   if (!renderer) {
     renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -668,21 +712,42 @@ function drawPreview(data) {
     renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
   }
   scene.background = new THREE.Color(css('--field'));
-  if (meshObj) { scene.remove(meshObj); meshObj.geometry.dispose(); meshObj.material.dispose(); }
+  disposePreview();
 
-  const positions = decode(data.positions, Float32Array);
+  const srcPos = decode(data.positions, Float32Array);
   const classes = decode(data.classes, Uint8Array);
-  const palette = ['--roof', '--wall', '--ground', '--ceiling', '--plain'].map((n) => new THREE.Color(css(n)));
-  const colors = new Float32Array(positions.length);
-  for (let i = 0; i < classes.length; i++) {
-    const c = palette[classes[i]] ?? palette[4];
-    for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], i * 9 + k * 3);
-  }
+  const n = classes.length;
+  const srcUv = data.uvs ? decode(data.uvs, Float32Array) : new Float32Array(n * 6);
+  const look = data.look ? decode(data.look, Int32Array) : new Int32Array(n).fill(-1);
+  const looks = data.looks || [];
+
+  // 같은 겉모습끼리 모아 그리기 묶음(group)을 만든다. 묶음 0은 겉모습 없는 면(분류 색).
+  const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => look[a] - look[b]);
+  const palette = ['--roof', '--wall', '--ground', '--ceiling', '--plain'].map((name) => new THREE.Color(css(name)));
+  const positions = new Float32Array(n * 9);
+  const colors = new Float32Array(n * 9);
+  const uvs = new Float32Array(n * 6);
   const geom = new THREE.BufferGeometry();
+  let start = 0;
+  for (let j = 0; j < n; j++) {
+    const i = order[j];
+    positions.set(srcPos.subarray(i * 9, i * 9 + 9), j * 9);
+    uvs.set(srcUv.subarray(i * 6, i * 6 + 6), j * 6);
+    const c = palette[classes[i]] ?? palette[4];
+    for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], j * 9 + k * 3);
+    if (j === n - 1 || look[order[j + 1]] !== look[i]) {
+      geom.addGroup(start * 3, (j + 1 - start) * 3, look[i] + 1);
+      start = j + 1;
+    }
+  }
   geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   geom.computeVertexNormals();
-  meshObj = new THREE.Mesh(geom, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+  classMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  lookMaterials = [classMaterial, ...looks.map((l) => lookMaterial(l, jobId))];
+  meshObj = new THREE.Mesh(geom, lookMaterials);
+  applyViewMode();
   scene.add(meshObj);
 
   const radius = Math.max(Math.hypot(...data.size) / 2, 1);

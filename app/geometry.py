@@ -42,6 +42,8 @@ class Building:
     tris: np.ndarray  # 미리보기용 (k, 3, 3)
     tri_cls: np.ndarray  # 미리보기용 (k,)
     stats: dict
+    tri_uv: np.ndarray | None = None  # 미리보기용 (k, 3, 2), 텍스처 없는 면은 NaN
+    tri_mat: np.ndarray | None = None  # 미리보기용 (k,) 재질 색인
 
 
 def to_world(
@@ -255,4 +257,5 @@ def build(
         "class_triangles": counts,
         "warnings": warnings,
     }
-    return Building(name, source, polygons, bbox, height, solid, tv, cls, stats)
+    tri_uv = np.where(has_tex[:, None, None], uvs, np.nan)
+    return Building(name, source, polygons, bbox, height, solid, tv, cls, stats, tri_uv, mats)

@@ -225,4 +225,14 @@ def job_preview(job_id: str):
     return FileResponse(path, media_type="application/json")
 
 
+@app.get("/api/jobs/{job_id}/texture/{name:path}")
+def job_texture(job_id: str, name: str):
+    """미리보기가 쓰는 텍스처 이미지. 출력 폴더 안의 jpg·png만 내준다."""
+    out_dir = _job_dir(job_id) / "output"
+    path = _safe_target(out_dir, name)
+    if path is None or path.suffix.lower() not in (".jpg", ".jpeg", ".png") or not path.is_file():
+        raise HTTPException(404, "텍스처를 찾을 수 없습니다")
+    return FileResponse(path)
+
+
 app.mount("/", StaticFiles(directory=ROOT / "static", html=True), name="static")
